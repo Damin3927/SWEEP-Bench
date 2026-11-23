@@ -1,0 +1,14 @@
+diff --git a/utils/instruction_generator.py b/utils/instruction_generator.py
+index 9a9dad2..b1aeb85 100644
+--- a/utils/instruction_generator.py
++++ b/utils/instruction_generator.py
+@@ -17,6 +17,9 @@ class InstructionGenerator:
+         if isinstance(inst_metadata, str):
+             inst_metadata = json.loads(inst_metadata)
+ 
++        if inst_metadata["task"] == "raw":
++            return random.choice(inst_metadata["instructions"])
++
+         tmpl = InstructionGenerator._get_instruction_template(inst_metadata["task"])
+         object_desc = random.choice(inst_metadata.get("objects", [""]))
+         container_desc = random.choice(inst_metadata.get("containers", [""]))

@@ -1,0 +1,27 @@
+diff --git a/core/train.py b/core/train.py
+index b947690..f8f560a 100644
+--- a/core/train.py
++++ b/core/train.py
+@@ -222,6 +222,22 @@ def train(cfg):
+                         cfg, policy, cfg.DIR.CHECKPOINTS, epoch_idx + 1
+                     )
+ 
++            test_freq = cfg.TRAIN.get("TEST_FREQ_BATCH", 0)
++            if test_freq and n_itr > 0 and n_itr % test_freq == 0:
++                mid_test_losses = core.test(
++                    cfg, test_data_loader=test_data_loader, policy=policy
++                )
++                policy.train()
++                if utils.distributed.is_master():
++                    tb_writer.add_scalars(
++                        {"Loss/Batch/Test": mid_test_losses.avg()}, n_itr
++                    )
++                if utils.distributed.is_local_master():
++                    logging.info(
++                        "[Val @ itr %d] TestLoss = %.4f" % (n_itr, mid_test_losses.avg())
++                    )
++                batch_end_time = time.perf_counter()
++
+             if utils.distributed.is_local_master():
+                 logging.info(
+                     "[Epoch %d/%d][Batch %d/%d] BatchTime = %.3f (s) DataTime = %.3f (s) Loss = %.4f"

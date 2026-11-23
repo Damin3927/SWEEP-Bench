@@ -1,0 +1,43 @@
+diff --git a/prismatic/vla/constants.py b/prismatic/vla/constants.py
+index 229ae94..927f592 100644
+--- a/prismatic/vla/constants.py
++++ b/prismatic/vla/constants.py
+@@ -4,6 +4,7 @@ Important constants for VLA training and evaluation.
+ Attempts to automatically identify the correct constants to set based on the Python command used to launch
+ training or evaluation. If it is unclear, defaults to using the LIBERO simulation benchmark constants.
+ """
++import os
+ import sys
+ from enum import Enum
+ 
+@@ -44,9 +45,19 @@ BRIDGE_CONSTANTS = {
+     "ACTION_PROPRIO_NORMALIZATION_TYPE": NormalizationType.BOUNDS_Q99,
+ }
+ 
++BENCH_CONSTANTS = {
++    "NUM_ACTIONS_CHUNK": 16,
++    "ACTION_DIM": 8,
++    "PROPRIO_DIM": 8,
++    "ACTION_PROPRIO_NORMALIZATION_TYPE": NormalizationType.BOUNDS_Q99,
++}
++
+ 
+ # Function to detect robot platform from command line arguments
+ def detect_robot_platform():
++    if os.environ.get("PRISMATIC_ROBOT_PLATFORM"):
++        return os.environ["PRISMATIC_ROBOT_PLATFORM"].upper()
++
+     cmd_args = " ".join(sys.argv).lower()
+ 
+     if "libero" in cmd_args:
+@@ -70,6 +81,10 @@ elif ROBOT_PLATFORM == "ALOHA":
+     constants = ALOHA_CONSTANTS
+ elif ROBOT_PLATFORM == "BRIDGE":
+     constants = BRIDGE_CONSTANTS
++elif ROBOT_PLATFORM == "BENCH":
++    constants = BENCH_CONSTANTS
++else:
++    raise ValueError(f"Unknown robot platform: {ROBOT_PLATFORM}")
+ 
+ # Assign constants to global variables
+ NUM_ACTIONS_CHUNK = constants["NUM_ACTIONS_CHUNK"]

@@ -1,0 +1,21 @@
+[submodule "policy_servers/cosmospolicy/upstream"]
+	path = policy_servers/cosmospolicy/upstream
+	url = https://github.com/NVlabs/cosmos-policy
+[submodule "policy_servers/dynamicvla/upstream"]
+	path = policy_servers/dynamicvla/upstream
+	url = https://github.com/hzxie/DynamicVLA.git
+[submodule "policy_servers/fastwam/upstream"]
+	path = policy_servers/fastwam/upstream
+	url = https://github.com/yuantianyuan01/FastWAM.git
+[submodule "policy_servers/groot/upstream"]
+	path = policy_servers/groot/upstream
+	url = https://github.com/NVIDIA/Isaac-GR00T
+[submodule "policy_servers/openpi/upstream"]
+	path = policy_servers/openpi/upstream
+	url = https://github.com/Physical-Intelligence/openpi.git
+[submodule "policy_servers/openvlaoft/upstream"]
+	path = policy_servers/openvlaoft/upstream
+	url = https://github.com/moojink/openvla-oft.git
+[submodule "policy_servers/vlajepa/upstream"]
+	path = policy_servers/vlajepa/upstream
+	url = https://github.com/ginwind/VLA-JEPA.git

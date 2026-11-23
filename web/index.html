@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWEEP-Bench</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="static/vendor/bulma.min.css">
+<link rel="stylesheet" href="static/vendor/bulma-carousel.min.css">
+<link rel="stylesheet" href="static/vendor/template.css">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<main>
+<section class="hero hero-mosaic" id="top">
+  <video class="hero-bg" src="static/vid/hero/hero.mp4" poster="static/vid/hero/hero.jpg" autoplay muted loop playsinline
+    aria-label="Scripted-expert clips of the benchmark's tasks in different rooms, one column per belt speed, slowest on the left"></video>
+  <div class="hero-body">
+    <div class="container is-max-desktop has-text-centered">
+      <h1 class="title is-1 publication-title">SWEEP-Bench</h1>
+      <p class="is-size-4 publication-subtitle">Speed-Wise Evaluation of Embodied Policies</p>
+      <p class="is-size-5 publication-authors"><span class="author-block">Hiroaki Honda</span>, <span class="author-block">Koya Sakamoto</span>, <span class="author-block">Shu Morikuni</span>, <span class="author-block">Yusuke Iwasawa</span>, <span class="author-block">Taiki Miyanishi</span></p>
+      <p class="is-size-6 publication-affiliations"><span class="author-block">The University of Tokyo</span></p>
+      <div class="publication-links"><span class="link-block"><a href="https://github.com/Damin3927/SWEEP-Bench" class="button is-normal is-rounded is-dark"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6l-6 6 6 6 M16 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Code</span></a></span><span class="link-block"><a href="https://huggingface.co/datasets/Damin3927/SWEEP-Bench" class="button is-normal is-rounded is-dark"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><span>Dataset</span></a></span></div>
+    </div>
+  </div>
+  <p class="hero-scale" aria-hidden="true">
+    <span class="end"><span class="num">0.10 m/s</span><span class="word">slower</span></span>
+    <span class="track"><span>belt speed, one column per speed</span></span>
+    <span class="end"><span class="num">0.40 m/s</span><span class="word">faster</span></span>
+  </p>
+</section>
+<section class="hero teaser">
+  <div class="container is-max-desktop">
+    <div class="hero-body">
+      <figure class="media-figure" id="overview">
+        <img src="static/img/overview.jpg" width="1718" height="585" alt="One task from each of 12 skill categories, each at a different belt speed, with the objects outlined now and 0.5 s and 1 s earlier.">
+        <figcaption>One task from each of 12 skill categories, each at a random belt speed. Solid outlines show where
+          the objects are now; dashed ones, where they were 0.5 s and 1 s earlier.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+<section class="section hero is-light" id="abstract">
+  <div class="container is-max-desktop">
+    <p class="tldr"><strong>TL;DR.</strong> We introduced SWEEP-Bench, a benchmark of 80 conveyor tasks at 13 belt speeds. Many fine-tuned policies tend to produce actions suited to the average demonstration speed, and our results suggest that past frames widen the speed range only for those pretrained on multiple frames. An estimated speed recovers most of the gain that policies obtain from the ground-truth speed.</p>
+    <h2 class="title is-3 has-text-centered">Abstract</h2>
+    <div class="content has-text-justified"><p>Robot policies must adapt to the speed of moving objects, yet existing benchmarks rarely measure this ability across diverse tasks and speeds. We introduce SWEEP-Bench, a simulation benchmark with 80 conveyor-belt manipulation tasks spanning 16 skill categories, each evaluated at 13 belt speeds (0.10–0.40 m/s). Objects are transported through physical contact with a visibly moving belt. Each task has a static counterpart, and each evaluation episode uses the same randomized scene at all 13 speeds. We fine-tune eight vision-language-action and world-action models on demonstrations spanning the full speed range, comparing observations from the current frame alone with those including two past frames. For six models, the success rate peaks at intermediate speeds, and their failures indicate that they tend to produce actions suited to the average demonstration speed rather than to the actual one. Past frames raise the success rate by 10–40 percentage points for three models, and linear probes show that the belt speed is also most linearly decodable from these three. Adding ground-truth speed input to four of the models improves all of them, and a speed estimated from the images keeps most of this gain. These results show that SWEEP-Bench exposes speed-dependent failures and suggest that past frames help only policies from which the speed is most decodable, such as those pretrained on multiple frames.</p></div>
+  </div>
+</section>
+<section class="section" id="benchmark">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Benchmark</h2>
+    <p class="lead">80 conveyor tasks in 16 skill categories, each run at 13 belt speeds from 0.10 to 0.40 m/s. Every
+      evaluation episode uses the same scene at all speeds, so only the speed changes.</p>
+  </div>
+  <div class="container is-max-desktop">
+    <figure id="teaser" class="media-figure">
+      <div class="teaser-row">
+        <div class="teaser-cell"><video data-src="static/vid/teaser/0.10.mp4" muted playsinline preload="auto" aria-label="Expert at 0.10 m/s"></video><span class="speed-tag">0.10 m/s</span></div>
+        <div class="teaser-cell"><video data-src="static/vid/teaser/0.25.mp4" muted playsinline preload="auto" aria-label="Expert at 0.25 m/s"></video><span class="speed-tag">0.25 m/s</span></div>
+        <div class="teaser-cell"><video data-src="static/vid/teaser/0.40.mp4" muted playsinline preload="auto" aria-label="Expert at 0.40 m/s"></video><span class="speed-tag">0.40 m/s</span></div>
+      </div>
+      <figcaption class="has-text-centered">The scripted expert that collects the demonstrations, on Fruit drop.
+        It reaches for the object as soon as it is in view, so it grasps slow objects earlier on the belt.</figcaption>
+    </figure>
+    <div class="bar">
+      <div class="buttons has-addons" id="task-speed" role="group" aria-label="Belt speed of the expert clips"></div>
+      <p class="rule">One task from each of eight categories.</p>
+    </div>
+    <div class="carousel results-carousel" id="task-carousel"></div>
+    <details class="all-tasks" id="all-tasks">
+      <summary class="button is-light">Show all 80 tasks</summary>
+      <div class="all-tasks-body">
+        <p class="rule">† and ‡ mark the 20- and 40-task subsets.</p>
+        <div class="chips" id="category-chips" role="group" aria-label="Skill category"></div>
+        <p class="count" id="gallery-count" aria-live="polite"></p>
+        <div class="gallery" id="gallery"></div>
+      </div>
+    </details>
+  </div>
+</section>
+<section class="section hero is-light" id="results">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Results</h2>
+    <h3 class="title is-5">Most policies do best at mid-range speeds</h3>
+    <p class="finding">We fine-tune eight models on demonstrations at all speeds, with the current camera frame alone or
+      with two past frames added. Six of them succeed most often in the middle of the speed range and less often at
+      both ends. DynamicVLA and Fast-WAM do best near the slowest speed.</p>
+  </div>
+  <div class="container is-max-desktop">
+    <figure class="chart-figure">
+      <div class="bar">
+        <div class="chips" id="model-chips" role="group" aria-label="Models"></div>
+        <div class="buttons has-addons" id="input-toggle" role="group" aria-label="Input">
+          <button type="button" class="button is-small" data-input="both">Both inputs</button>
+          <button type="button" class="button is-small" data-input="orig">Current frame</button>
+          <button type="button" class="button is-small" data-input="hist">+ Past frames</button>
+        </div>
+      </div>
+      <div class="chart" id="chart"></div>
+      <noscript><img src="static/img/speed_curves.png" width="1718" height="512" alt="Success rate versus belt speed for eight models"></noscript>
+      <figcaption>Success rate over all 80 tasks. Dashed: current frame only; solid: with past frames. Hover or tap to
+        read values.</figcaption>
+    </figure>
+    <div class="findings">
+      <div class="finding-block">
+        <h3 class="title is-5">Past frames help only three models</h3>
+        <p class="finding">Past frames raise the success rate of Fast-WAM, Cosmos Policy and DynamicVLA by 26.4, 9.6
+          and 39.5 points, while the other five change by −5.6 to +0.9 points. A linear probe reads the belt speed well from
+          these three models, and much less from the others, even before fine-tuning.</p>
+        <img src="static/img/probe.png" width="820" height="609" alt="Linear-probe R squared of belt speed at three stages of each fine-tuned policy" loading="lazy">
+        <p class="caption">How well a linear probe reads the belt speed from each part of each policy (R², on held-out
+          tasks).</p>
+      </div>
+      <div class="finding-block">
+        <h3 class="title is-5">Giving the policy the belt speed helps, even an estimated one</h3>
+        <p class="finding">With the true belt speed as an extra input, four policies gain 12 to 34 points on a 20-task
+          subset. A speed estimated from two camera images keeps most of that gain.</p>
+        <img src="static/img/speed_input.png" width="820" height="682" alt="Success with ground-truth or estimated belt speed" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+<section class="section" id="failures">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">How policies fail</h2>
+    <p class="finding">The six models that peak fail in opposite ways at the two ends. At 0.10 m/s, 48% of their
+      episodes fail because the policy acts before the object arrives; at 0.40 m/s, 69% fail because it acts after the
+      object has passed. They tend to time their actions for the average demonstration speed.</p>
+  </div>
+  <div class="container is-max-desktop">
+    <div class="bar">
+      <div class="buttons has-addons" id="qual-tabs" role="group" aria-label="Task"></div>
+      <p class="count" id="qual-count" aria-live="polite"></p>
+    </div>
+    <dl class="legend">
+      <div><dt><span class="label success">Success</span></dt><dd>The episode succeeds.</dd></div>
+      <div><dt><span class="label early">Too early</span></dt><dd>Acts before the object arrives.</dd></div>
+      <div><dt><span class="label late">Too late</span></dt><dd>Acts after the object has passed.</dd></div>
+      <div><dt><span class="label other">Other failure</span></dt><dd>On time, but misses, drops or misplaces it.</dd></div>
+    </dl>
+    <div class="matrix qual" id="qual-matrix"></div>
+    <p class="note" id="rerender-note" hidden>For this task a room object stood between the recording camera and the
+      robot; the policies' cameras did not see it. Clips marked “re-rendered” replay the logged actions with that camera
+      moved closer; the others show the original view.</p>
+    <details class="more" id="collapse-more">
+      <summary>Without past frames, DynamicVLA and Fast-WAM fail above the slowest speed</summary>
+      <div class="bar">
+        <div class="buttons has-addons" id="collapse-tabs" role="group" aria-label="Task"></div>
+        <p class="rule">The same scene at 0.10, 0.20 and 0.40 m/s, with and without past frames.</p>
+      </div>
+      <div class="matrix collapse" id="collapse-matrix"></div>
+      <p class="note" id="collapse-note" hidden></p>
+    </details>
+  </div>
+</section>
+<section class="section hero is-light" id="robot">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 has-text-centered">Real robot</h2>
+    <p class="finding">On a real conveyor, π<sub>0.5</sub> closes its gripper at about the same spot at 0.05 and 0.20
+      m/s, too early for the slow sponge. Fast-WAM follows the sponge at 0.05 m/s but is too late at 0.20 m/s. With
+      the belt speed as input, π<sub>0.5</sub> scores 80, and 66 with the estimated speed, against 31 without it.</p>
+    <div id="real-figure"></div>
+    <template id="real-input-tag"><span class="input-tag"><span class="long">Policy input, 224 × 224 (padding cropped)</span><span class="short">Policy input, 224 × 224</span></span></template>
+    <p class="rule">Head camera, both policies with past frames. Each clip is the trial nearest the median gripper-closing
+      time of its 10 trials (Fast-WAM never closes at 0.20 m/s, so its middle trial is shown).</p>
+  </div>
+</section>
+</main>
+<footer class="footer">
+  <div class="container is-max-desktop content has-text-centered">
+    <p>Page template adapted from the Nerfies project page
+      (<a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>). The simulated scenes use ReplicaCAD,
+      ArchitecTHOR and RoboCasa rooms, Google Scanned Objects, YCB, RoboCasa and Poly Haven objects, and Poly Haven and
+      ambientCG materials. The videos are shared under CC BY-NC 4.0, as many of them show ReplicaCAD rooms. Credits
+      and licenses: <a href="static/LICENSES.txt">LICENSES.txt</a>.</p>
+  </div>
+</footer>
+<script src="static/data.js"></script>
+<script src="static/vendor/bulma-carousel.min.js"></script>
+<script src="static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+diff --git a/prismatic/vla/datasets/datasets.py b/prismatic/vla/datasets/datasets.py
+index 06cadbf..7b794a4 100644
+--- a/prismatic/vla/datasets/datasets.py
++++ b/prismatic/vla/datasets/datasets.py
+@@ -20,8 +20,6 @@ from prismatic.models.backbones.vision import ImageTransform
+ from prismatic.util.data_utils import tree_map
+ from prismatic.vla.action_tokenizer import ActionTokenizer
+ from prismatic.vla.constants import ACTION_DIM, ACTION_PROPRIO_NORMALIZATION_TYPE, ACTION_TOKEN_BEGIN_IDX, IGNORE_INDEX, NUM_ACTIONS_CHUNK, PROPRIO_DIM, STOP_INDEX
+-from prismatic.vla.datasets.rlds import make_interleaved_dataset, make_single_dataset
+-from prismatic.vla.datasets.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
+ 
+ @dataclass
+ class RLDSBatchTransform:
+@@ -103,6 +101,8 @@ class RLDSDataset(IterableDataset):
+         image_aug: bool = False,
+     ) -> None:
+         """Lightweight wrapper around RLDS TFDS Pipeline for use with PyTorch/OpenVLA Data Loaders."""
++        from prismatic.vla.datasets.rlds.oxe import OXE_NAMED_MIXTURES, get_oxe_dataset_kwargs_and_weights
++
+         self.data_root_dir, self.data_mix, self.batch_transform = data_root_dir, data_mix, batch_transform
+ 
+         # Configure RLDS Dataset(s)
+@@ -169,6 +169,8 @@ class RLDSDataset(IterableDataset):
+         self.dataset, self.dataset_length, self.dataset_statistics = self.make_dataset(rlds_config)
+ 
+     def make_dataset(self, rlds_config):
++        from prismatic.vla.datasets.rlds import make_interleaved_dataset
++
+         return make_interleaved_dataset(**rlds_config)
+ 
+     def __iter__(self) -> Dict[str, Any]:
+@@ -187,6 +189,8 @@ class EpisodicRLDSDataset(RLDSDataset):
+     """Returns full episodes as list of steps instead of individual transitions (useful for visualizations)."""
+ 
+     def make_dataset(self, rlds_config):
++        from prismatic.vla.datasets.rlds import make_single_dataset
++
+         per_dataset_kwargs = rlds_config["dataset_kwargs_list"]
+         assert len(per_dataset_kwargs) == 1, "Only support single-dataset `mixes` for episodic datasets."
+ 

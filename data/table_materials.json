@@ -1,0 +1,1237 @@
+{
+ "schema_version": 1,
+ "resolution": "1k",
+ "default": "oak_veneer_01",
+ "materials": [
+  {
+   "id": "oak_veneer_01",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Oak Veneer 01",
+   "page": "https://polyhaven.com/a/oak_veneer_01",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.83,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_diff_1k.jpg",
+     "bytes": 641756,
+     "sha256": "c14681f72f59f17bff568cae7a837641443b607b899f0c279cd64a5638f877a7"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_nor_gl_1k.jpg",
+     "bytes": 484844,
+     "sha256": "1297acf7b4476d5ccd83cc8b27be96aa6110f7a9c3a40be0bd767bf81b17db01"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oak_veneer_01/oak_veneer_01_rough_1k.jpg",
+     "bytes": 865194,
+     "sha256": "ca2af5649b628ef05f196793d68cdca874c12ceb6e9ae566976546d9dd5a2604"
+    }
+   }
+  },
+  {
+   "id": "american_walnut_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "American Walnut Veneer",
+   "page": "https://polyhaven.com/a/american_walnut_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_diff_1k.jpg",
+     "bytes": 579182,
+     "sha256": "10d983003bb686db4af3d35d91197fdb6144dcd15d3dcea2ef315600f51b1af5"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_nor_gl_1k.jpg",
+     "bytes": 414945,
+     "sha256": "f54890d8dd352c8668d643adaa0ad66bd5a3b62995198b7dfb518fa59efebca2"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/american_walnut_veneer/american_walnut_veneer_rough_1k.jpg",
+     "bytes": 691712,
+     "sha256": "a13cd23228a4cb1bf0e342b4602d636123699cde61a2ff16bec1ce45a33ac62e"
+    }
+   }
+  },
+  {
+   "id": "bamboo_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Bamboo Veneer",
+   "page": "https://polyhaven.com/a/bamboo_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bamboo_veneer/bamboo_veneer_diff_1k.jpg",
+     "bytes": 499386,
+     "sha256": "903a46f3414355c62a6dab09d0c01b1d54cbefac09d6de1996030bc90f406115"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bamboo_veneer/bamboo_veneer_nor_gl_1k.jpg",
+     "bytes": 259223,
+     "sha256": "8ff4be8cc818f151fdca4c27730dca24995cb8ad53688caa47792f464f42f281"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/bamboo_veneer/bamboo_veneer_rough_1k.jpg",
+     "bytes": 618975,
+     "sha256": "1d5efb306da62c3d7d44d2e8e0fb4af5499cd2358b72fde916c99166972e57e1"
+    }
+   }
+  },
+  {
+   "id": "black_oak_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Black Oak Veneer",
+   "page": "https://polyhaven.com/a/black_oak_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/black_oak_veneer/black_oak_veneer_diff_1k.jpg",
+     "bytes": 580236,
+     "sha256": "7893f9bfeda626364f0a803dea6327c9f3a7b2f2fe330f6b4f326f6b06c0c265"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/black_oak_veneer/black_oak_veneer_nor_gl_1k.jpg",
+     "bytes": 390277,
+     "sha256": "3073677e6adba6ac9e205d2b1eebdb0e2153a119c0a358b30bc5dcbb0ecfd7ec"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/black_oak_veneer/black_oak_veneer_rough_1k.jpg",
+     "bytes": 565446,
+     "sha256": "c2b17b90ebc600d5d2512437d8506028306ba37c5785ab09031058f7208e2306"
+    }
+   }
+  },
+  {
+   "id": "cherry_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Cherry Veneer",
+   "page": "https://polyhaven.com/a/cherry_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cherry_veneer/cherry_veneer_diff_1k.jpg",
+     "bytes": 485750,
+     "sha256": "d50fed9f9964721d6b18581cadb6d95717a714b85361b22078e7d913ba5ce4d2"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cherry_veneer/cherry_veneer_nor_gl_1k.jpg",
+     "bytes": 288037,
+     "sha256": "d2c722c80651e7c1074d46f27c18a78de5bce9ced1c8afc82ea3aa555555e57a"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/cherry_veneer/cherry_veneer_rough_1k.jpg",
+     "bytes": 522104,
+     "sha256": "25dc671f72a5c78c2fec855b95a009d1c948a9616007887a653c2c695ee1b7a6"
+    }
+   }
+  },
+  {
+   "id": "lacquered_cherry_wood",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Lacquered Cherry Wood",
+   "page": "https://polyhaven.com/a/lacquered_cherry_wood",
+   "authors": [
+    "Jenelle van Heerden",
+    "Rico Cilliers"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/lacquered_cherry_wood/lacquered_cherry_wood_diff_1k.jpg",
+     "bytes": 618034,
+     "sha256": "781a173cfbe1b11a00d2f73a7736b7db6f908e47bbad8eaaf9d59c36490ab857"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/lacquered_cherry_wood/lacquered_cherry_wood_nor_gl_1k.jpg",
+     "bytes": 66478,
+     "sha256": "69ff5072f14469c391b5af28185cb3835b85858eff57e2d2902e1fbc9d882b68"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/lacquered_cherry_wood/lacquered_cherry_wood_rough_1k.jpg",
+     "bytes": 578380,
+     "sha256": "50d8e159b648fa2a08c4e31d2979116ebf4f86648a1a442c7160aafca8009b56"
+    }
+   }
+  },
+  {
+   "id": "rosewood_veneer_02",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Rosewood Veneer 02",
+   "page": "https://polyhaven.com/a/rosewood_veneer_02",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_diff_1k.jpg",
+     "bytes": 641315,
+     "sha256": "f4085bf7554ff14ed8b8a39154dbeef12c12b66f7ceec763963d7be0c7fd6a40"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_nor_gl_1k.jpg",
+     "bytes": 368723,
+     "sha256": "3d186abe4523a805172fb8417f46aab34edcd3d8f3546400bc3e567dd099b21e"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_rough_1k.jpg",
+     "bytes": 511348,
+     "sha256": "558c1bd6676b6601e907e03e2173cfcb83d2885a201ea09a0377c81ca8f6abfc"
+    }
+   }
+  },
+  {
+   "id": "sapele_veneer_02",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Sapele Veneer 02",
+   "page": "https://polyhaven.com/a/sapele_veneer_02",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sapele_veneer_02/sapele_veneer_02_diff_1k.jpg",
+     "bytes": 525798,
+     "sha256": "bb746623d9b4535503344ddd8e6b7dbe5eded9c033b326c71dc5002cc7724e5b"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sapele_veneer_02/sapele_veneer_02_nor_gl_1k.jpg",
+     "bytes": 459498,
+     "sha256": "eb5d40caa4f10a08a4376e982f7910f8e1ec064a246a3a3709236c21b2dd87c1"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sapele_veneer_02/sapele_veneer_02_rough_1k.jpg",
+     "bytes": 529601,
+     "sha256": "66779913121696b0972b76506f2f7692f7b712b2693ddd5e9db765c7eedcb2f2"
+    }
+   }
+  },
+  {
+   "id": "teak_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Teak Veneer",
+   "page": "https://polyhaven.com/a/teak_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/teak_veneer/teak_veneer_diff_1k.jpg",
+     "bytes": 612194,
+     "sha256": "ba501180029ec8804e430177e4d67446da23a3be4d5dbad94a498de070324275"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/teak_veneer/teak_veneer_nor_gl_1k.jpg",
+     "bytes": 410625,
+     "sha256": "e2cd5aa363feea0bb1fd5c682f9b28c9810def07621915a413a834fafd57c851"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/teak_veneer/teak_veneer_rough_1k.jpg",
+     "bytes": 731629,
+     "sha256": "cb8a09ae509a4c89df998fc14e1deb0c623615bf2f480af78d561d8536972db0"
+    }
+   }
+  },
+  {
+   "id": "white_maple_veneer",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "White Maple Veneer",
+   "page": "https://polyhaven.com/a/white_maple_veneer",
+   "authors": [
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_maple_veneer/white_maple_veneer_diff_1k.jpg",
+     "bytes": 443279,
+     "sha256": "0cdcb6d726ca7e6039ab0eeb2b1828a0ef188b43c2370972cf6eebeaff76aaa0"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_maple_veneer/white_maple_veneer_nor_gl_1k.jpg",
+     "bytes": 275968,
+     "sha256": "fb63ac49ab9a8f1e650a7886e570bfb46a1970d73b9a943c29015f3f111078fc"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/white_maple_veneer/white_maple_veneer_rough_1k.jpg",
+     "bytes": 721797,
+     "sha256": "6bacc0bae40c52759e91d77555baad27f9e8cb2bec471d755726262539e6df02"
+    }
+   }
+  },
+  {
+   "id": "wood_table_001",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Wood Table 001",
+   "page": "https://polyhaven.com/a/wood_table_001",
+   "authors": [
+    "Dimitrios Savva",
+    "Rico Cilliers"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.5,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_001/wood_table_001_diff_1k.jpg",
+     "bytes": 215573,
+     "sha256": "460dd08d240f4a1f02982415048c3c5c200f385db212da18dc7e2df68bf4d0be"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_001/wood_table_001_nor_gl_1k.jpg",
+     "bytes": 51927,
+     "sha256": "9bf7ddf5721e225c20290f1772ae37f9bdfd49658f6d458259eb794e2149d3cf"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_001/wood_table_001_rough_1k.jpg",
+     "bytes": 237261,
+     "sha256": "a2ca9ae89dfe7b8e2e5e92f0aa43467845417de8a50205b5852ef0d57c7624f9"
+    }
+   }
+  },
+  {
+   "id": "wood_table_worn",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Wood Table Worn",
+   "page": "https://polyhaven.com/a/wood_table_worn",
+   "authors": [
+    "Dimitrios Savva",
+    "Rico Cilliers"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 0.55,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_diff_1k.jpg",
+     "bytes": 761543,
+     "sha256": "092ab3465a6a24b24d092ea86865f332c3bd239b8eb2fd664b70357082031a3f"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_nor_gl_1k.jpg",
+     "bytes": 747433,
+     "sha256": "0d494f3fe08320a05f0f966a7a3ca3c4cd6e3f7cde5b176b9bc167b5593fd00d"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/wood_table_worn/wood_table_worn_rough_1k.jpg",
+     "bytes": 655232,
+     "sha256": "ebc4a15d7d3495ee1b67ba18f67bffcefac3f93881d1394fa3e22a25f9fe5c72"
+    }
+   }
+  },
+  {
+   "id": "kitchen_wood",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Kitchen Wood",
+   "page": "https://polyhaven.com/a/kitchen_wood",
+   "authors": [
+    "Rob Tuytel"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 0.6,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/kitchen_wood/kitchen_wood_diff_1k.jpg",
+     "bytes": 879137,
+     "sha256": "6d0170f1ab1b9353aab6f0382a7753026e32a5b58f779651cd05a91618dfcdab"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/kitchen_wood/kitchen_wood_nor_gl_1k.jpg",
+     "bytes": 666833,
+     "sha256": "30d6c1f3f7ad9e6a0e216393d9ee9a489f3b8a6efd9d85237f639e9bfde4cae5"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/kitchen_wood/kitchen_wood_rough_1k.jpg",
+     "bytes": 875985,
+     "sha256": "38044a0b781b2d3219804bc045fc0d226bae33060cc18bb13355fb578ee98c73"
+    }
+   }
+  },
+  {
+   "id": "coated_pine",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Coated Pine",
+   "page": "https://polyhaven.com/a/coated_pine",
+   "authors": [
+    "Charlotte Baglioni",
+    "Rico Cilliers"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 0.74,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/coated_pine/coated_pine_diff_1k.jpg",
+     "bytes": 710600,
+     "sha256": "afee7cfb2ec1716edc712f929cdb3d3dfbac5a0ba290e25943b4472a8144bbaf"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/coated_pine/coated_pine_nor_gl_1k.jpg",
+     "bytes": 443383,
+     "sha256": "91eb707d7b0dd44133502878f37ede93e6be23c2019e64df72dffe46f6985b3a"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/coated_pine/coated_pine_rough_1k.jpg",
+     "bytes": 491513,
+     "sha256": "6ecebef8ffde1833ee9656d3bf7cf863694ad99ac041cacf2fc5432b2f5383e1"
+    }
+   }
+  },
+  {
+   "id": "stained_pine",
+   "source": "polyhaven",
+   "category": "wood",
+   "name": "Stained Pine",
+   "page": "https://polyhaven.com/a/stained_pine",
+   "authors": [
+    "Dario Barresi",
+    "Jenelle van Heerden"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 0.9,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/stained_pine/stained_pine_diff_1k.jpg",
+     "bytes": 652040,
+     "sha256": "bab73315eb57f942a98e3201ef7f00515f3a4c5b74bb9aba9c00007a3029e594"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/stained_pine/stained_pine_nor_gl_1k.jpg",
+     "bytes": 406276,
+     "sha256": "528a97d37a751965a6d97f6e0c58cddc33295f2588e47fa87a6c5afe82ade693"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/stained_pine/stained_pine_rough_1k.jpg",
+     "bytes": 12710,
+     "sha256": "f955b0561d5a868c7fc67f5d6dcb540b4d5c85234a0060164ef5d0d20cdb50f8"
+    }
+   }
+  },
+  {
+   "id": "plywood",
+   "source": "polyhaven",
+   "category": "board",
+   "name": "Plywood",
+   "page": "https://polyhaven.com/a/plywood",
+   "authors": [
+    "Rob Tuytel"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 0.5,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plywood/plywood_diff_1k.jpg",
+     "bytes": 882059,
+     "sha256": "800905650fc6cab2fe7c77c41851f8ea89669f1287ad5ce67c48f435654c0af8"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plywood/plywood_nor_gl_1k.jpg",
+     "bytes": 648222,
+     "sha256": "a0d8459eb2586435790225440319586775c9b7dff8441062e077501fd0811e53"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/plywood/plywood_rough_1k.jpg",
+     "bytes": 729997,
+     "sha256": "c4600551fa90bf1222de07b5d92e09456501f0449a4f315c203770bfcbd97aaf"
+    }
+   }
+  },
+  {
+   "id": "oriented_strand_board",
+   "source": "polyhaven",
+   "category": "board",
+   "name": "Oriented Strand Board",
+   "page": "https://polyhaven.com/a/oriented_strand_board",
+   "authors": [
+    "Dimitrios Savva"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 2.51,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oriented_strand_board/oriented_strand_board_diff_1k.jpg",
+     "bytes": 1017205,
+     "sha256": "f2564c203e5ad37dfa240b43e9e954f9638592159fc52ac37fcefb78b8cea682"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oriented_strand_board/oriented_strand_board_nor_gl_1k.jpg",
+     "bytes": 714968,
+     "sha256": "25e4d581f7915de432591a7bd449c2e3a98bf62585a5b644c2cb6455d5da2448"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/oriented_strand_board/oriented_strand_board_rough_1k.jpg",
+     "bytes": 1118294,
+     "sha256": "c21332de7809bb02dfffb60426f5a2c6c3da126609e8cf57ae7f1e7617b7ca11"
+    }
+   }
+  },
+  {
+   "id": "laminate_floor_02",
+   "source": "polyhaven",
+   "category": "laminate",
+   "name": "Laminate Floor 02",
+   "page": "https://polyhaven.com/a/laminate_floor_02",
+   "authors": [
+    "Charlotte Baglioni",
+    "Dario Barresi"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 1.7,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/laminate_floor_02/laminate_floor_02_diff_1k.jpg",
+     "bytes": 721641,
+     "sha256": "c112a8fb107d8600a2974af2f9fa9b595c491a33a59982e22706e9650990bf8f"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/laminate_floor_02/laminate_floor_02_nor_gl_1k.jpg",
+     "bytes": 515725,
+     "sha256": "ec501e1c76269cabc1648ab0e3f38db1b062ffef7ff4ce037fdc369383afd005"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/laminate_floor_02/laminate_floor_02_rough_1k.jpg",
+     "bytes": 560815,
+     "sha256": "1d48d21a8497d83d4148e4378bf6891e052c98b58cdce1f79003bcc24a3aff8f"
+    }
+   }
+  },
+  {
+   "id": "linoleum_brown",
+   "source": "polyhaven",
+   "category": "linoleum",
+   "name": "Linoleum Brown",
+   "page": "https://polyhaven.com/a/linoleum_brown",
+   "authors": [
+    "Rob Tuytel"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://polyhaven.com/license",
+   "tile_m": 2.0,
+   "archive": null,
+   "maps": {
+    "color": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/linoleum_brown/linoleum_brown_diff_1k.jpg",
+     "bytes": 684269,
+     "sha256": "8947b927043fafc668d6b90454aee18edd37e6f49dc8f87253ca3693ef94f3a4"
+    },
+    "normal": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/linoleum_brown/linoleum_brown_nor_gl_1k.jpg",
+     "bytes": 555729,
+     "sha256": "e880ac8cad3f79fe7babd61871e95c859f258deeba45aab5b53c3f18f139df2d"
+    },
+    "roughness": {
+     "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/linoleum_brown/linoleum_brown_rough_1k.jpg",
+     "bytes": 617859,
+     "sha256": "4f673be3b5887d0454af5583f8536b1ae35ba06e329688c27a25d92e0d553115"
+    }
+   }
+  },
+  {
+   "id": "Cork003",
+   "source": "ambientcg",
+   "category": "board",
+   "name": "Cork 003",
+   "page": "https://ambientcg.com/view?id=Cork003",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Cork003_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Cork003_1K-JPG_Color.jpg",
+     "bytes": 1441754,
+     "sha256": "d0ff4f334cec20f2cb86304674265372471ecfdc21522f1c70316244a417c598"
+    },
+    "normal": {
+     "member": "Cork003_1K-JPG_NormalGL.jpg",
+     "bytes": 1641667,
+     "sha256": "8e277e5740ecc3c34edd7bfc8a9c2a4adf8546ba1f016f011ed924631e022583"
+    },
+    "roughness": {
+     "member": "Cork003_1K-JPG_Roughness.jpg",
+     "bytes": 477625,
+     "sha256": "ae401a31cc6d78ec9be86ab8ac7082e096467495cde41813959c70ea5a20c0a4"
+    }
+   }
+  },
+  {
+   "id": "Marble012",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Marble 012",
+   "page": "https://ambientcg.com/view?id=Marble012",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Marble012_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Marble012_1K-JPG_Color.jpg",
+     "bytes": 1220876,
+     "sha256": "a34b55c889c6b3819d2c351b6409bfd0baf0a0a55b073441850627dfebcdcd1e"
+    },
+    "normal": {
+     "member": "Marble012_1K-JPG_NormalGL.jpg",
+     "bytes": 342955,
+     "sha256": "2e9a56525ffbb7e80854b19985a5c921f91192698ea337f4834192479ba0063b"
+    },
+    "roughness": {
+     "member": "Marble012_1K-JPG_Roughness.jpg",
+     "bytes": 535814,
+     "sha256": "f7afd636d6cca0b470549959c514976186df58ac1013016b6c3919910a6d3a04"
+    }
+   }
+  },
+  {
+   "id": "Marble016",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Marble 016",
+   "page": "https://ambientcg.com/view?id=Marble016",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Marble016_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Marble016_1K-JPG_Color.jpg",
+     "bytes": 1115823,
+     "sha256": "df9a3bb47f860c6f638711a9afe93aad5fa3b4e3b7abce241501175d2e7d244c"
+    },
+    "normal": {
+     "member": "Marble016_1K-JPG_NormalGL.jpg",
+     "bytes": 340229,
+     "sha256": "93ecc59d8ebdd87b8a5102adb5be15ce62796a3c138c80c001eeca5f6b27c4d1"
+    },
+    "roughness": {
+     "member": "Marble016_1K-JPG_Roughness.jpg",
+     "bytes": 337203,
+     "sha256": "92a40b2dfd88834875122cedb6cd45898f9baab5506d20a7bc8687681fb05b2b"
+    }
+   }
+  },
+  {
+   "id": "Marble021",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Marble 021",
+   "page": "https://ambientcg.com/view?id=Marble021",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Marble021_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Marble021_1K-JPG_Color.jpg",
+     "bytes": 1067026,
+     "sha256": "3d3f3b3dd4730b22aeb72cc10ba34a658fb58282fc64e9e867bd67382c98a777"
+    },
+    "normal": {
+     "member": "Marble021_1K-JPG_NormalGL.jpg",
+     "bytes": 339360,
+     "sha256": "4e5fb0adb06f81707c4cb3aebf67bde399e0c2098ee2e03d0f2745a24af3b728"
+    },
+    "roughness": {
+     "member": "Marble021_1K-JPG_Roughness.jpg",
+     "bytes": 348218,
+     "sha256": "5a20d923f9f048fa88ffb445038cca0c7973cbe0a88bfd8822e7d10348f1e1fb"
+    }
+   }
+  },
+  {
+   "id": "Granite002A",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Granite 002 A",
+   "page": "https://ambientcg.com/view?id=Granite002A",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Granite002A_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Granite002A_1K-JPG_Color.jpg",
+     "bytes": 1461024,
+     "sha256": "4fd1615d6122bc62e609dfacb59aa9ced01f104e10f5569a2224dad2c9ff13ae"
+    },
+    "normal": {
+     "member": "Granite002A_1K-JPG_NormalGL.jpg",
+     "bytes": 342171,
+     "sha256": "d3c6e8e250198d326d9ba77a07031062b765a7e57e6266c43ed5fb4d60daecc8"
+    },
+    "roughness": {
+     "member": "Granite002A_1K-JPG_Roughness.jpg",
+     "bytes": 506916,
+     "sha256": "dee08d0cee2b9a4ce93dc4e67e95bc67054e2b42a693a6b2a3acecdf6f60d203"
+    }
+   }
+  },
+  {
+   "id": "Granite001A",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Granite 001 A",
+   "page": "https://ambientcg.com/view?id=Granite001A",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Granite001A_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Granite001A_1K-JPG_Color.jpg",
+     "bytes": 2022816,
+     "sha256": "3df54e01319611b02ec6207e5afa3f468c77cf4af128dcf3f5ec3ed5df12de1b"
+    },
+    "normal": {
+     "member": "Granite001A_1K-JPG_NormalGL.jpg",
+     "bytes": 343771,
+     "sha256": "c1f32af1b5021db96f95a8241c8100777fdc0920b964837259b9fdd100714221"
+    },
+    "roughness": {
+     "member": "Granite001A_1K-JPG_Roughness.jpg",
+     "bytes": 628377,
+     "sha256": "48f427fc3cb05c334da6e203e5dbb4ae54cb1eeeebeab568497b056aa1427070"
+    }
+   }
+  },
+  {
+   "id": "Terrazzo013",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Terrazzo 013",
+   "page": "https://ambientcg.com/view?id=Terrazzo013",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Terrazzo013_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Terrazzo013_1K-JPG_Color.jpg",
+     "bytes": 1023600,
+     "sha256": "d29e7faed63ea349ecaf61666dbb2ddfe90b34fa112b924b4e4e756ac496a3fa"
+    },
+    "normal": {
+     "member": "Terrazzo013_1K-JPG_NormalGL.jpg",
+     "bytes": 679114,
+     "sha256": "faa48614887a626bffaaa48f6e3b42e61c72099695edad6ece30d0d440effb62"
+    },
+    "roughness": {
+     "member": "Terrazzo013_1K-JPG_Roughness.jpg",
+     "bytes": 466715,
+     "sha256": "314abffe72481cb7f3f225b14c91c6a9e33f987489162d9fec5a1519959bfb8e"
+    }
+   }
+  },
+  {
+   "id": "Terrazzo005",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Terrazzo 005",
+   "page": "https://ambientcg.com/view?id=Terrazzo005",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Terrazzo005_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Terrazzo005_1K-JPG_Color.jpg",
+     "bytes": 1458455,
+     "sha256": "32e2ebb8685ecb4438d06f4d9d865d227c8765ccd98860b266f90ae7159ebdfb"
+    },
+    "normal": {
+     "member": "Terrazzo005_1K-JPG_NormalGL.jpg",
+     "bytes": 1445685,
+     "sha256": "49997c1be4826584f4a169a9f1986656a682bd2f432354f7d58ad061b4f1a258"
+    },
+    "roughness": {
+     "member": "Terrazzo005_1K-JPG_Roughness.jpg",
+     "bytes": 514387,
+     "sha256": "196ce8dd1f9fdf558790f0612fe19e658c446d17c0f9d5305d9d08fb10526231"
+    }
+   }
+  },
+  {
+   "id": "Travertine009",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Travertine 009",
+   "page": "https://ambientcg.com/view?id=Travertine009",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.2,
+   "archive": "https://ambientcg.com/get?file=Travertine009_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Travertine009_1K-JPG_Color.jpg",
+     "bytes": 922573,
+     "sha256": "6561c87d92aef321aef4095fbcc5518cec4d711e642be6beaa90d13829e6cd2b"
+    },
+    "normal": {
+     "member": "Travertine009_1K-JPG_NormalGL.jpg",
+     "bytes": 332407,
+     "sha256": "635256a78537253a2d2bc5fef5fcda6e4e03349b960c57f15cf721b7cf5ba098"
+    },
+    "roughness": {
+     "member": "Travertine009_1K-JPG_Roughness.jpg",
+     "bytes": 298778,
+     "sha256": "f4094c2149e257f4b6e17e5c5da70101fcbffaf0ce4016ab5d6aac7e45112e37"
+    }
+   }
+  },
+  {
+   "id": "Concrete034",
+   "source": "ambientcg",
+   "category": "stone",
+   "name": "Concrete 034",
+   "page": "https://ambientcg.com/view?id=Concrete034",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.1,
+   "archive": "https://ambientcg.com/get?file=Concrete034_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Concrete034_1K-JPG_Color.jpg",
+     "bytes": 269501,
+     "sha256": "8ceb9186d990b31fce785e06fdc6974c160f1d27c43f6160266f164deba713aa"
+    },
+    "normal": {
+     "member": "Concrete034_1K-JPG_NormalGL.jpg",
+     "bytes": 821681,
+     "sha256": "e509eb9dfa978e780fbebfd2acacc2ce158b5b7ced722ddc0759039dd51e18ca"
+    },
+    "roughness": {
+     "member": "Concrete034_1K-JPG_Roughness.jpg",
+     "bytes": 217708,
+     "sha256": "a4a9e39857a19afd23a778e5abf44fcdf6bd7f93918f1cf6878b41933e553511"
+    }
+   }
+  },
+  {
+   "id": "Metal009",
+   "source": "ambientcg",
+   "category": "metal",
+   "name": "Metal 009",
+   "page": "https://ambientcg.com/view?id=Metal009",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Metal009_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Metal009_1K-JPG_Color.jpg",
+     "bytes": 616678,
+     "sha256": "e066e240ad0eaab6a73fb0f40fa7caa94365160770331babc91de2e8ce6a986f"
+    },
+    "normal": {
+     "member": "Metal009_1K-JPG_NormalGL.jpg",
+     "bytes": 814572,
+     "sha256": "45c7c88685e6b44da7e8d25e2cf6d8645d42209793ccc4354e68c16cdae15d62"
+    },
+    "roughness": {
+     "member": "Metal009_1K-JPG_Roughness.jpg",
+     "bytes": 486233,
+     "sha256": "6d06dfe8c240d3b6f33030740110284245bd8aefb2e10e8eb0c563444d9c0c5b"
+    },
+    "metallic": {
+     "member": "Metal009_1K-JPG_Metalness.jpg",
+     "bytes": 4257,
+     "sha256": "843102638fa0a5bf897888868877efab8ccdc4cb84a48e57bdb52bfb30f5e714"
+    }
+   }
+  },
+  {
+   "id": "Metal032",
+   "source": "ambientcg",
+   "category": "metal",
+   "name": "Metal 032",
+   "page": "https://ambientcg.com/view?id=Metal032",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Metal032_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Metal032_1K-JPG_Color.jpg",
+     "bytes": 701900,
+     "sha256": "49493d6ade78ccbbbd270c6a15e4b4c9b1a097e66ddf28a1073de3e85712d9af"
+    },
+    "normal": {
+     "member": "Metal032_1K-JPG_NormalGL.jpg",
+     "bytes": 341948,
+     "sha256": "8537c1015de5cc33d20231e5b6aa27309edcb983e1c37e608d08bb00f733747d"
+    },
+    "roughness": {
+     "member": "Metal032_1K-JPG_Roughness.jpg",
+     "bytes": 404875,
+     "sha256": "55d3eee2b69008ad3701b18977495531d0e3515105102e56f40a4d1098d10bce"
+    },
+    "metallic": {
+     "member": "Metal032_1K-JPG_Metalness.jpg",
+     "bytes": 4257,
+     "sha256": "843102638fa0a5bf897888868877efab8ccdc4cb84a48e57bdb52bfb30f5e714"
+    }
+   }
+  },
+  {
+   "id": "Metal046B",
+   "source": "ambientcg",
+   "category": "metal",
+   "name": "Metal 046 B",
+   "page": "https://ambientcg.com/view?id=Metal046B",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Metal046B_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Metal046B_1K-JPG_Color.jpg",
+     "bytes": 706330,
+     "sha256": "7caf8ddbd06aa730e41db993ff344eb60d872ff698e5da117b3527f09ba1877e"
+    },
+    "normal": {
+     "member": "Metal046B_1K-JPG_NormalGL.jpg",
+     "bytes": 1272514,
+     "sha256": "7848f006f06e352cfa4fdcf53e1c47ac0a2ca32839b7bd9f1bf9a1b1113fe837"
+    },
+    "roughness": {
+     "member": "Metal046B_1K-JPG_Roughness.jpg",
+     "bytes": 502726,
+     "sha256": "d74b89826875ce104064d71975e04361d312c0910d3a115269e2516352494547"
+    },
+    "metallic": {
+     "member": "Metal046B_1K-JPG_Metalness.jpg",
+     "bytes": 968767,
+     "sha256": "8abc018e4013de769d41a1cf204049e54f0f39edac39fb3558eda31b532dc493"
+    }
+   }
+  },
+  {
+   "id": "PaintedWood005",
+   "source": "ambientcg",
+   "category": "painted",
+   "name": "Painted Wood 005",
+   "page": "https://ambientcg.com/view?id=PaintedWood005",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=PaintedWood005_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "PaintedWood005_1K-JPG_Color.jpg",
+     "bytes": 1107834,
+     "sha256": "7ac2fbfcf8446c40f15f0d83a65cd14d60d9e85dbf3806cee8dbba0f808b8694"
+    },
+    "normal": {
+     "member": "PaintedWood005_1K-JPG_NormalGL.jpg",
+     "bytes": 1821585,
+     "sha256": "611891dfd369164da807e23940f0e16fe45e271d1cd40f4025c486c5aa46a1b5"
+    },
+    "roughness": {
+     "member": "PaintedWood005_1K-JPG_Roughness.jpg",
+     "bytes": 577916,
+     "sha256": "00b3d433cbae82d939320b3485c50a7544b472d9f31cc1a94e3ac463f16536a2"
+    }
+   }
+  },
+  {
+   "id": "PaintedWood007A",
+   "source": "ambientcg",
+   "category": "painted",
+   "name": "Painted Wood 007 A",
+   "page": "https://ambientcg.com/view?id=PaintedWood007A",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=PaintedWood007A_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "PaintedWood007A_1K-JPG_Color.jpg",
+     "bytes": 1317759,
+     "sha256": "a9054c5d310ef208d86873dfb613c523899ac5727558390d5094e00ad7a88286"
+    },
+    "normal": {
+     "member": "PaintedWood007A_1K-JPG_NormalGL.jpg",
+     "bytes": 1532739,
+     "sha256": "4063a80ce670c5dff024d44a25cdf63f22fe9de5c919571760f271349ba42a0b"
+    },
+    "roughness": {
+     "member": "PaintedWood007A_1K-JPG_Roughness.jpg",
+     "bytes": 476281,
+     "sha256": "b8feebea0b72f4806c8f661a8f09bcdea0dc1185a8206637cfd546254429a5a1"
+    }
+   }
+  },
+  {
+   "id": "PaintedWood009C",
+   "source": "ambientcg",
+   "category": "painted",
+   "name": "Painted Wood 009 C",
+   "page": "https://ambientcg.com/view?id=PaintedWood009C",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=PaintedWood009C_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "PaintedWood009C_1K-JPG_Color.jpg",
+     "bytes": 1253297,
+     "sha256": "2e7cfdfce8691369c5e2997433bc60c01040283c92584202daaf7619df360ed4"
+    },
+    "normal": {
+     "member": "PaintedWood009C_1K-JPG_NormalGL.jpg",
+     "bytes": 1745558,
+     "sha256": "6df31a8b25275e27630c2596844e118bd3d199f8c9aa7f1eb054be0d6d062b64"
+    },
+    "roughness": {
+     "member": "PaintedWood009C_1K-JPG_Roughness.jpg",
+     "bytes": 534305,
+     "sha256": "51382221fec534381abf41a437e70574b663d842f261c2c3613c7dcaa00c0a57"
+    }
+   }
+  },
+  {
+   "id": "Plastic010",
+   "source": "ambientcg",
+   "category": "plastic",
+   "name": "Plastic 010",
+   "page": "https://ambientcg.com/view?id=Plastic010",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Plastic010_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Plastic010_1K-JPG_Color.jpg",
+     "bytes": 140856,
+     "sha256": "4a91d8a74184acb5e84fb9ddbfbc12c49102864157c91e2b3b5950133ef05e06"
+    },
+    "normal": {
+     "member": "Plastic010_1K-JPG_NormalGL.jpg",
+     "bytes": 540914,
+     "sha256": "cc073c8312edd35f42e038c45861e055f511f7f627dcb04f420324e38b5ce861"
+    },
+    "roughness": {
+     "member": "Plastic010_1K-JPG_Roughness.jpg",
+     "bytes": 502558,
+     "sha256": "02f35e8fdb8f1ba78594a3e43792683276d7f713e53d3002a8c8f53bb35a88cb"
+    }
+   }
+  },
+  {
+   "id": "Plastic006",
+   "source": "ambientcg",
+   "category": "plastic",
+   "name": "Plastic 006",
+   "page": "https://ambientcg.com/view?id=Plastic006",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Plastic006_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Plastic006_1K-JPG_Color.jpg",
+     "bytes": 478016,
+     "sha256": "965d1fdc1b89e95d144dcd11f605734c01c245926793f09094aac97104ae42be"
+    },
+    "normal": {
+     "member": "Plastic006_1K-JPG_NormalGL.jpg",
+     "bytes": 729230,
+     "sha256": "2f5d02f8e9c9e03fc11e2e85f3face2fbec2c4cf8a3880750c7ba80f45d45c8d"
+    },
+    "roughness": {
+     "member": "Plastic006_1K-JPG_Roughness.jpg",
+     "bytes": 501396,
+     "sha256": "97dce716c6348870334292ace6c28117af8b580f5e840eabf60e7b63105b3f87"
+    }
+   }
+  },
+  {
+   "id": "Plastic008",
+   "source": "ambientcg",
+   "category": "plastic",
+   "name": "Plastic 008",
+   "page": "https://ambientcg.com/view?id=Plastic008",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Plastic008_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Plastic008_1K-JPG_Color.jpg",
+     "bytes": 502957,
+     "sha256": "8937cf152bdc6bad74eaea0dd0924280c0ee5a0f28c8df4b7f1c804d9681d421"
+    },
+    "normal": {
+     "member": "Plastic008_1K-JPG_NormalGL.jpg",
+     "bytes": 850111,
+     "sha256": "ac7a99af4be9d4e6140a21f6257204d2687bc2c482ef1034134581411e2e8aaf"
+    },
+    "roughness": {
+     "member": "Plastic008_1K-JPG_Roughness.jpg",
+     "bytes": 202914,
+     "sha256": "9c6e3e5074fcfb0e53eea7d09ba6eacd6b84fd53a92d62ca89f2fa34fda769e8"
+    }
+   }
+  },
+  {
+   "id": "Plastic013A",
+   "source": "ambientcg",
+   "category": "plastic",
+   "name": "Plastic 013 A",
+   "page": "https://ambientcg.com/view?id=Plastic013A",
+   "authors": [
+    "ambientCG (Lennart Demes)"
+   ],
+   "license": "CC0 1.0",
+   "license_url": "https://docs.ambientcg.com/license/",
+   "tile_m": 1.0,
+   "archive": "https://ambientcg.com/get?file=Plastic013A_1K-JPG.zip",
+   "maps": {
+    "color": {
+     "member": "Plastic013A_1K-JPG_Color.jpg",
+     "bytes": 391120,
+     "sha256": "d6a768442a9e4f3eb48e29fb4a1b9a24d1c981f88e752b298e9f48b2326c95ce"
+    },
+    "normal": {
+     "member": "Plastic013A_1K-JPG_NormalGL.jpg",
+     "bytes": 1609471,
+     "sha256": "95a71f9d06f46a349f187ab8ced8cdc09319964c16023a82281839f5b1f6d3f4"
+    },
+    "roughness": {
+     "member": "Plastic013A_1K-JPG_Roughness.jpg",
+     "bytes": 584881,
+     "sha256": "2e1713c864352c21e39337c733273b145cdabbf459ab085a207c0486462eb960"
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+Third-party files used by this page
+===================================
+
+static/vendor/bulma.min.css
+  Bulma 0.9.1 (includes minireset.css 0.0.6), MIT License.
+  The release's header comment, which carried the project's web address, is removed; the license text follows.
+
+The MIT License (MIT)
+
+Copyright (c) 2020 Jeremy Thomas
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+static/vendor/bulma-carousel.min.css, static/vendor/bulma-carousel.min.js
+  bulma-carousel 4.0.24, MIT License, unmodified.
+
+MIT License
+
+Copyright (c) 2018 CreativeBulma
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+static/vendor/template.css
+  Adapted from the stylesheet of the Academic Project Page Template, which is adapted from the Nerfies
+  project page. Licensed under the Creative Commons Attribution-ShareAlike 4.0 International License
+  (CC BY-SA 4.0); this adaptation is shared under the same license. Changes: only the rules this page uses
+  are kept, web-font names are removed, and hover animations are dropped.
+
+
+Scenes in the page's videos and images
+======================================
+
+The simulated scenes use these assets, under their licenses.
+
+Rooms:
+  ReplicaCAD (Szot et al., 2021), CC BY-NC 4.0.
+  RoboCasa (Nasiriany et al., 2024), CC BY 4.0.
+  ArchitecTHOR (Deitke et al., 2022), Apache 2.0 in the original AI2-THOR release; the ManiSkill copy used here
+  is tagged CC BY 4.0.
+
+Objects:
+  Google Scanned Objects (Downs et al., 2022), CC BY 4.0.
+  YCB (Calli et al., 2015), CC BY 4.0.
+  RoboCasa objects (Nasiriany et al., 2024), CC BY 4.0.
+  Poly Haven models, CC0.
+
+Platform materials:
+  Poly Haven and ambientCG, CC0.
+
+The page's videos are shared under CC BY-NC 4.0, as many of them show ReplicaCAD rooms.

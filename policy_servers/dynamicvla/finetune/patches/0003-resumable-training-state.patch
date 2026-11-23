@@ -1,0 +1,112 @@
+diff --git a/core/train.py b/core/train.py
+index f8f560a..101a1b8 100644
+--- a/core/train.py
++++ b/core/train.py
+@@ -24,7 +24,28 @@
+ import utils.summary_writer
+ 
+ 
++def _bench_train_state():
++    import importlib.util
++    import sys
++
++    module = sys.modules.get("bench_train_state")
++    if module is None:
++        path = os.path.join(
++            os.path.dirname(os.path.abspath(__file__)),
++            os.pardir,
++            os.pardir,
++            "finetune",
++            "train_state.py",
++        )
++        spec = importlib.util.spec_from_file_location("bench_train_state", path)
++        module = importlib.util.module_from_spec(spec)
++        sys.modules["bench_train_state"] = module
++        spec.loader.exec_module(module)
++    return module
++
++
+ def train(cfg):
++    train_state = _bench_train_state()
+     torch.backends.cudnn.benchmark = True
+     torch.backends.cuda.matmul.allow_tf32 = True
+     rank, local_rank = utils.distributed.get_rank(), utils.distributed.get_local_rank()
+@@ -64,6 +85,9 @@
+         test_sampler = torch.utils.data.distributed.DistributedSampler(
+             test_dataset, rank=rank, shuffle=False, drop_last=True
+         )
++    resumable = train_state.Resumable.from_env(cfg.TRAIN.GRAD_ACCUM_STEPS)
++    if resumable is not None:
++        train_sampler = resumable.wrap_sampler(train_sampler, train_dataset)
+ 
+     train_data_loader = torch.utils.data.DataLoader(
+         dataset=train_dataset,
+@@ -156,6 +180,27 @@
+         num_warmup_steps=cfg.TRAIN.LR_SCHEDULER.N_WARMUP_STEPS,
+         num_training_steps=cfg.TRAIN.N_EPOCHS * n_batches,
+     )
++    resumed = None
++    if resumable is not None:
++        setup = train_state.RunSetup(
++            dataset=cfg.DATASET.NAME,
++            batch_size=cfg.TRAIN.BATCH_SIZE,
++            n_epochs=cfg.TRAIN.N_EPOCHS,
++            n_batches=n_batches,
++            lr=cfg.TRAIN.OPTIMIZER.LR,
++            lr_scheduler=cfg.TRAIN.LR_SCHEDULER.NAME,
++            n_warmup_steps=cfg.TRAIN.LR_SCHEDULER.N_WARMUP_STEPS,
++            test_freq_batch=cfg.TRAIN.get("TEST_FREQ_BATCH", 0),
++            train_episodes=train_state.episode_digest(train_dataset.episodes),
++            test_episodes=train_state.episode_digest(test_dataset.episodes),
++            data_env=train_state.data_env(),
++        )
++        checkpoints_dir = os.path.join(cfg.DIR.OUTPUT, "checkpoints", cfg.CONST.EXP_NAME)
++        resumed = resumable.load(checkpoints_dir, setup, policy, optimizer, lr_scheduler)
++        if resumed is not None:
++            init_epoch = resumed.epoch
++            if resumed.wandb_run_id:
++                cfg.WANDB.RUN_ID = resumed.wandb_run_id
+ 
+     # Set up folders for logs, snapshot and checkpoints
+     if utils.distributed.is_master():
+@@ -175,6 +220,10 @@
+         batch_time = utils.average_meter.AverageMeter()
+         data_time = utils.average_meter.AverageMeter()
+         train_losses = utils.average_meter.AverageMeter()
++        resuming = resumed is not None and epoch_idx == resumed.epoch
++        if resuming:
++            train_losses.__dict__.update(resumed.train_losses)
++            resumable.enter_epoch(resumed, epoch_idx)
+         # Randomize the DistributedSampler
+         if train_sampler:
+             train_sampler.set_epoch(epoch_idx)
+@@ -182,7 +231,10 @@
+         # Training loop
+         policy.train()
+         batch_end_time = time.perf_counter()
+-        for batch_idx, batch in enumerate(train_data_loader):
++        batches = enumerate(train_data_loader, resumed.batch if resuming else 0)
++        if resuming:
++            resumable.restore_rng(resumed, test_data_loader)
++        for batch_idx, batch in batches:
+             n_itr = epoch_idx * n_batches + batch_idx
+             data_time.update(time.perf_counter() - batch_end_time)
+             batch = {
+@@ -251,6 +303,17 @@
+                         train_losses.val(),
+                     )
+                 )
++            if resumable is not None:
++                resumable.maybe_save(
++                    policy,
++                    optimizer,
++                    lr_scheduler,
++                    epoch=epoch_idx,
++                    batch_idx=batch_idx,
++                    n_itr=n_itr,
++                    train_losses=train_losses,
++                    wandb_run_id=cfg.WANDB.get("RUN_ID") if cfg.WANDB.ENABLED else None,
++                )
+ 
+         epoch_end_time = time.perf_counter()
+         if utils.distributed.is_master():

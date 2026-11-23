@@ -1,0 +1,533 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SWEEP-Bench <sweep-bench@example.invalid>
+Date: Sat, 14 Nov 2026 00:00:00 +0000
+Subject: [PATCH 2/6] Train on the benchmark's conveyor datasets
+
+sweep_bench_2cam and sweep_bench_uncond_2cam224_1e-4: the two-camera EE-DOM
+training set and the paper's recipe (batch 128 as 8 x 8 accumulation x 2
+GPUs, one epoch of 9,838 steps, cosine LR 1e-4, 8-bit AdamW, gradient
+checkpointing).
+The trainer gains `optimizer: adamw8bit` and checkpoint retention, the
+loader declares the parquet schema for datasets 3.6, `raw` JSON task
+strings are unwrapped to the instruction, and a script writes the dataset
+stats that runs share.
+---
+ configs/data/sweep_bench_2cam.yaml            |  61 ++++++++
+ .../task/sweep_bench_uncond_2cam224_1e-4.yaml |  26 ++++
+ configs/train.yaml                            |   3 +
+ pyproject.toml                                |   1 +
+ scripts/compute_dataset_stats.py              |  22 +++
+ scripts/ds_configs/ds_zero1_config.json       |   1 +
+ scripts/precompute_text_embeds.py             |   3 +-
+ .../lerobot/lerobot/lerobot_dataset.py        |   5 +-
+ .../lerobot/processors/fastwam_processor.py   |   3 +-
+ src/fastwam/datasets/lerobot/task_text.py     |  14 ++
+ src/fastwam/trainer.py                        |  59 +++++++-
+ tests/test_sweep_bench_config.py              | 131 ++++++++++++++++++
+ 12 files changed, 324 insertions(+), 5 deletions(-)
+ create mode 100644 configs/data/sweep_bench_2cam.yaml
+ create mode 100644 configs/task/sweep_bench_uncond_2cam224_1e-4.yaml
+ create mode 100644 scripts/compute_dataset_stats.py
+ create mode 100644 src/fastwam/datasets/lerobot/task_text.py
+ create mode 100644 tests/test_sweep_bench_config.py
+
+diff --git a/configs/data/sweep_bench_2cam.yaml b/configs/data/sweep_bench_2cam.yaml
+new file mode 100644
+index 0000000..b90306f
+--- /dev/null
++++ b/configs/data/sweep_bench_2cam.yaml
+@@ -0,0 +1,61 @@
++train:
++  _target_: fastwam.datasets.lerobot.robot_video_dataset.RobotVideoDataset
++  dataset_dirs:
++    - ./data/sweep_bench_ee_dom
++  shape_meta:
++    images:
++      - key: opst_cam
++        raw_shape: [3, 224, 224]
++        shape: [3, 224, 224]
++      - key: wrist_cam
++        raw_shape: [3, 224, 224]
++        shape: [3, 224, 224]
++    action:
++      - key: default
++        raw_shape: 7
++        shape: 7
++    state:
++      - key: default
++        raw_shape: 6
++        shape: 6
++  num_frames: 33
++  num_history_frames: 0
++  history_stride: 1
++  global_sample_stride: 1
++  action_video_freq_ratio: 4
++  video_size: [224, 448]
++  camera_key: null
++  val_set_proportion: 0.0
++  pretrained_norm_stats: null
++  is_training_set: true
++  skip_padding_as_possible: false
++  concat_multi_camera: "horizontal"
++  processor:
++    _target_: fastwam.datasets.lerobot.processors.fastwam_processor.FastWAMProcessor
++    shape_meta: ${data.train.shape_meta}
++    num_obs_steps: ${data.train.num_frames}
++    num_history_frames: ${data.train.num_history_frames}
++    num_output_cameras: 2
++    action_output_dim: 7
++    proprio_output_dim: 6
++
++    delta_action_dim_mask: null
++
++    action_state_transforms: null
++    use_stepwise_action_norm: False
++    norm_default_mode: min/max
++    norm_exception_mode: null
++
++    action_state_merger:
++      _target_: fastwam.datasets.lerobot.transforms.action_state_merger.ConcatLeftAlign
++
++    train_transforms:
++      - _target_: fastwam.datasets.lerobot.transforms.image.ToTensor
++      - _target_: torchvision.transforms.Resize
++        size: [224, 224]
++    val_transforms:
++      - _target_: fastwam.datasets.lerobot.transforms.image.ToTensor
++      - _target_: torchvision.transforms.Resize
++        size: [224, 224]
++  text_embedding_cache_dir: ./data/text_embeds_cache/sweep_bench
++  context_len: 128
+diff --git a/configs/task/sweep_bench_uncond_2cam224_1e-4.yaml b/configs/task/sweep_bench_uncond_2cam224_1e-4.yaml
+new file mode 100644
+index 0000000..b3648a7
+--- /dev/null
++++ b/configs/task/sweep_bench_uncond_2cam224_1e-4.yaml
+@@ -0,0 +1,26 @@
++# @package _global_
++
++defaults:
++  - override /data: sweep_bench_2cam
++  - override /model: fastwam
++  - _self_
++
++batch_size: 8
++gradient_accumulation_steps: 8
++num_workers: 16
++
++model:
++  mot_checkpoint_mixed_attn: true
++
++optimizer: adamw8bit
++
++lr_scheduler_type: "cosine"
++learning_rate: 1e-4
++weight_decay: 1e-2
++num_epochs: 1
++max_steps: 9838
++log_every: 10
++save_every: 500
++keep_last_states: 1
++keep_weights_every: 2000
++eval_every: 0
+diff --git a/configs/train.yaml b/configs/train.yaml
+index eb1f788..a85d894 100644
+--- a/configs/train.yaml
++++ b/configs/train.yaml
+@@ -20,6 +20,8 @@ num_epochs: 1
+ max_steps: null
+ log_every: 10
+ save_every: 100
++keep_last_states: null
++keep_weights_every: null
+ eval_every: 50
+ eval_num_inference_steps: 10
+ 
+@@ -29,6 +31,7 @@ mixed_precision: "bf16" # one of: [no, fp16, bf16]
+ seed: 42
+ max_grad_norm: 1.0
+ weight_decay: 0.0
++optimizer: adamw
+ resume: null
+ 
+ # wandb
+diff --git a/pyproject.toml b/pyproject.toml
+index 22ed494..5f6a664 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -10,6 +10,7 @@ requires-python = ">=3.10"
+ dependencies = [
+   "accelerate==1.12.0",
+   "av==16.0.1",
++  "bitsandbytes==0.47.0",
+   "boto3==1.35.99",
+   "datasets==3.6.0",
+   "deepspeed==0.18.5",
+diff --git a/scripts/compute_dataset_stats.py b/scripts/compute_dataset_stats.py
+new file mode 100644
+index 0000000..467bf6e
+--- /dev/null
++++ b/scripts/compute_dataset_stats.py
+@@ -0,0 +1,22 @@
++"""Compute `dataset_stats.json` for a training config once, without training."""
++
++import hydra
++from hydra.utils import instantiate
++from omegaconf import DictConfig
++
++from fastwam.utils import misc
++from fastwam.utils.config_resolvers import register_default_resolvers
++
++register_default_resolvers()
++
++
++@hydra.main(config_path="../configs", config_name="train", version_base="1.3")
++def main(cfg: DictConfig):
++    if cfg.data.train.get("pretrained_norm_stats"):
++        raise ValueError("data.train.pretrained_norm_stats is set; nothing to compute.")
++    misc.register_work_dir(cfg.output_dir)
++    instantiate(cfg.data.train)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/scripts/ds_configs/ds_zero1_config.json b/scripts/ds_configs/ds_zero1_config.json
+index 5c9bea2..6eafd62 100644
+--- a/scripts/ds_configs/ds_zero1_config.json
++++ b/scripts/ds_configs/ds_zero1_config.json
+@@ -2,6 +2,7 @@
+   "train_batch_size": "auto",
+   "train_micro_batch_size_per_gpu": "auto",
+   "gradient_accumulation_steps": "auto",
++  "zero_allow_untested_optimizer": true,
+   "zero_optimization": {
+     "stage": 1,
+     "offload_optimizer": {
+diff --git a/scripts/precompute_text_embeds.py b/scripts/precompute_text_embeds.py
+index 0c1f8e2..ea84961 100644
+--- a/scripts/precompute_text_embeds.py
++++ b/scripts/precompute_text_embeds.py
+@@ -14,6 +14,7 @@ from omegaconf import DictConfig, ListConfig
+ from tqdm import tqdm
+ 
+ from fastwam.datasets.lerobot.robot_video_dataset import DEFAULT_PROMPT
++from fastwam.datasets.lerobot.task_text import task_instruction
+ from fastwam.models.wan22.helpers.loader import _load_registered_model, _resolve_configs
+ from fastwam.models.wan22.wan_video_text_encoder import HuggingfaceTokenizer
+ from fastwam.utils.config_resolvers import register_default_resolvers
+@@ -129,7 +130,7 @@ def _read_unique_prompts(dataset_dirs: list[str]) -> list[str]:
+                 record = json.loads(line)
+                 if "task" not in record:
+                     raise KeyError(f"Missing `task` field at {tasks_path}:{line_idx}")
+-                task = str(record["task"])
++                task = task_instruction(str(record["task"]))
+                 prompt = DEFAULT_PROMPT.format(task=task)
+                 total_task_rows += 1
+                 if prompt not in seen:
+diff --git a/src/fastwam/datasets/lerobot/lerobot/lerobot_dataset.py b/src/fastwam/datasets/lerobot/lerobot/lerobot_dataset.py
+index f7f2c2b..2f1e9d4 100644
+--- a/src/fastwam/datasets/lerobot/lerobot/lerobot_dataset.py
++++ b/src/fastwam/datasets/lerobot/lerobot/lerobot_dataset.py
+@@ -610,12 +610,13 @@ class LeRobotDataset(torch.utils.data.Dataset):
+ 
+     def load_hf_dataset(self) -> datasets.Dataset:
+         """hf_dataset contains all the observations, states, actions, rewards, etc."""
++        features = get_hf_features_from_features(self.features)
+         if self.episodes is None:
+             path = str(self.root / "data")
+-            hf_dataset = load_dataset("parquet", data_dir=path, split="train")
++            hf_dataset = load_dataset("parquet", data_dir=path, split="train", features=features)
+         else:
+             files = [str(self.root / self.meta.get_data_file_path(ep_idx)) for ep_idx in self.episodes]
+-            hf_dataset = load_dataset("parquet", data_files=files, split="train")
++            hf_dataset = load_dataset("parquet", data_files=files, split="train", features=features)
+ 
+         # TODO(aliberts): hf_dataset.set_format("torch")
+         hf_dataset.set_transform(hf_transform_to_torch)
+diff --git a/src/fastwam/datasets/lerobot/processors/fastwam_processor.py b/src/fastwam/datasets/lerobot/processors/fastwam_processor.py
+index 3b0b60a..e396ee2 100644
+--- a/src/fastwam/datasets/lerobot/processors/fastwam_processor.py
++++ b/src/fastwam/datasets/lerobot/processors/fastwam_processor.py
+@@ -8,6 +8,7 @@ from ..utils.normalizer import LinearNormalizer, NormMode
+ from fastwam.utils.pytorch_utils import dict_apply
+ from fastwam.utils.logging_config import get_logger
+ from .base_processor import BaseProcessor
++from ..task_text import task_instruction
+ 
+ logger = get_logger(__name__)
+ 
+@@ -136,7 +137,7 @@ class FastWAMProcessor(BaseProcessor):
+         if "task" not in data:
+             return f"[high] {high_level_instruction}"
+ 
+-        low_level_instruction = data["task"]
++        low_level_instruction = task_instruction(data["task"])
+         # Galaxea lerobot use @ to split Chinese and English instruction
+         if "@" in low_level_instruction:
+             zh, eng = low_level_instruction.split("@")
+diff --git a/src/fastwam/datasets/lerobot/task_text.py b/src/fastwam/datasets/lerobot/task_text.py
+new file mode 100644
+index 0000000..95716be
+--- /dev/null
++++ b/src/fastwam/datasets/lerobot/task_text.py
+@@ -0,0 +1,14 @@
++import json
++
++
++def task_instruction(task: str) -> str:
++    try:
++        record = json.loads(task)
++    except ValueError:
++        return task
++    if not isinstance(record, dict) or record.get("task") != "raw":
++        return task
++    instructions = record.get("instructions")
++    if not isinstance(instructions, list) or len(instructions) != 1 or not isinstance(instructions[0], str):
++        raise ValueError(f"raw task must carry exactly one instruction string, got {task!r}")
++    return instructions[0]
+diff --git a/src/fastwam/trainer.py b/src/fastwam/trainer.py
+index 5dad82d..702b5f3 100644
+--- a/src/fastwam/trainer.py
++++ b/src/fastwam/trainer.py
+@@ -3,6 +3,7 @@ import json
+ import inspect
+ import os
+ import re
++import shutil
+ from math import ceil
+ from pathlib import Path
+ import time
+@@ -25,6 +26,45 @@ from .utils.video_metrics import pil_frames_to_video_tensor, video_psnr, video_s
+ logger = get_logger(__name__)
+ 
+ 
++MAX_8BIT_GROUP_NUMEL = 2**30
++
++
++def chunk_params(params: list[torch.nn.Parameter], max_numel: int) -> list[list[torch.nn.Parameter]]:
++    groups: list[list[torch.nn.Parameter]] = [[]]
++    size = 0
++    for param in params:
++        if param.numel() > max_numel:
++            raise ValueError(f"a single parameter has {param.numel()} elements, above {max_numel}")
++        if groups[-1] and size + param.numel() > max_numel:
++            groups.append([])
++            size = 0
++        groups[-1].append(param)
++        size += param.numel()
++    return groups
++
++
++def build_optimizer(
++    name: str,
++    params: list[torch.nn.Parameter],
++    *,
++    lr: float,
++    weight_decay: float,
++    betas: tuple[float, float],
++) -> torch.optim.Optimizer:
++    if name == "adamw":
++        return torch.optim.AdamW(params, lr=lr, weight_decay=weight_decay, betas=betas)
++    if name == "adamw8bit":
++        import bitsandbytes as bnb
++
++        return bnb.optim.AdamW8bit(
++            [{"params": group} for group in chunk_params(params, MAX_8BIT_GROUP_NUMEL)],
++            lr=lr,
++            weight_decay=weight_decay,
++            betas=betas,
++        )
++    raise ValueError(f"Unknown optimizer: {name!r}. Expected one of: ['adamw', 'adamw8bit'].")
++
++
+ class Wan22Trainer:
+     def __init__(self, model, train_dataset, val_dataset=None, *, cfg: DictConfig):
+         self.model = model
+@@ -41,6 +81,8 @@ class Wan22Trainer:
+         self.max_steps = int(max_steps) if max_steps is not None else None
+         self.log_every = int(cfg.log_every)
+         self.save_every = int(cfg.save_every)
++        self.keep_last_states = None if cfg.keep_last_states is None else int(cfg.keep_last_states)
++        self.keep_weights_every = None if cfg.keep_weights_every is None else int(cfg.keep_weights_every)
+         self.eval_every = int(cfg.eval_every)
+         self.eval_num_inference_steps = int(cfg.eval_num_inference_steps)
+         self.gradient_accumulation_steps = int(cfg.gradient_accumulation_steps)
+@@ -86,7 +128,8 @@ class Wan22Trainer:
+         proprio_encoder = getattr(self.model, "proprio_encoder", None)
+         if proprio_encoder is not None:
+             trainable_params.extend(list(proprio_encoder.parameters()))
+-        self.optimizer = torch.optim.AdamW(
++        self.optimizer = build_optimizer(
++            str(cfg.optimizer),
+             trainable_params,
+             lr=self.learning_rate,
+             weight_decay=self.weight_decay,
+@@ -619,10 +662,22 @@ class Wan22Trainer:
+         self.accelerator.save_state(output_dir=state_path)
+         if self.accelerator.is_main_process:
+             self._save_trainer_state(state_path)
++            self._prune_checkpoints()
+         self.accelerator.wait_for_everyone()
+ 
+         return {"weights_path": ckpt_path, "state_path": state_path}
+ 
++    def _prune_checkpoints(self):
++        if self.keep_last_states is not None:
++            states = sorted(Path(self.state_dir).glob("step_*"))
++            for old in states[: max(len(states) - self.keep_last_states, 0)]:
++                shutil.rmtree(old)
++        if self.keep_weights_every is not None:
++            for weights in Path(self.weights_dir).glob("step_*.pt"):
++                step = int(weights.stem.removeprefix("step_"))
++                if step != self.global_step and step % self.keep_weights_every != 0:
++                    weights.unlink()
++
+     def load_training_state(self, state_dir: str):
+         self.accelerator.load_state(input_dir=state_dir)
+         state_file = Path(state_dir) / "trainer_state.json"
+@@ -737,6 +792,8 @@ class Wan22Trainer:
+                             steps_per_sec * self.batch_size * self.accelerator.num_processes,
+                             eta_str,
+                         )
++                        if torch.cuda.is_available():
++                            description += " max_mem=%.1fGiB" % (torch.cuda.max_memory_allocated() / 2**30)
+                         logger.info(description)
+ 
+                         wandb_payload = {
+diff --git a/tests/test_sweep_bench_config.py b/tests/test_sweep_bench_config.py
+new file mode 100644
+index 0000000..7c89c71
+--- /dev/null
++++ b/tests/test_sweep_bench_config.py
+@@ -0,0 +1,131 @@
++import json
++import types
++from pathlib import Path
++
++import pytest
++import torch
++from hydra import compose, initialize_config_dir
++
++from fastwam import trainer
++from fastwam.datasets.lerobot.base_lerobot_dataset import build_image_delta_offsets
++from fastwam.datasets.lerobot.task_text import task_instruction
++from fastwam.trainer import build_optimizer, chunk_params
++from fastwam.utils.config_resolvers import register_default_resolvers
++
++CONFIG_DIR = str(Path(__file__).resolve().parent.parent / "configs")
++FRAMES = 1_259_153
++WORLD_SIZE = 2
++
++register_default_resolvers()
++
++
++def _compose(task: str, *overrides: str):
++    with initialize_config_dir(config_dir=CONFIG_DIR, version_base="1.3"):
++        return compose(config_name="train", overrides=[f"task={task}", *overrides])
++
++
++def test_one_epoch_at_effective_batch_128_over_two_ranks():
++    cfg = _compose("sweep_bench_uncond_2cam224_1e-4")
++    assert cfg.batch_size * cfg.gradient_accumulation_steps * WORLD_SIZE == 128
++    assert (cfg.max_steps - 1) * 128 < FRAMES <= cfg.max_steps * 128
++
++
++def test_recipe_is_cosine_lr_1e_4_with_8bit_adamw_and_gradient_checkpointing():
++    cfg = _compose("sweep_bench_uncond_2cam224_1e-4")
++    assert cfg.data.train.dataset_dirs == ["./data/sweep_bench_ee_dom"]
++    assert cfg.data.train.text_embedding_cache_dir == "./data/text_embeds_cache/sweep_bench"
++    assert cfg.num_epochs == 1
++    assert cfg.lr_scheduler_type == "cosine"
++    assert cfg.learning_rate == 1e-4
++    assert cfg.weight_decay == 1e-2
++    assert cfg.optimizer == "adamw8bit"
++    assert cfg.model.mot_checkpoint_mixed_attn is True
++
++
++def test_raw_task_is_the_env_instruction():
++    raw = json.dumps({"task": "raw", "instructions": ["seat the rod in the notched carrier on the conveyor belt"]})
++    assert task_instruction(raw) == "seat the rod in the notched carrier on the conveyor belt"
++
++
++@pytest.mark.parametrize(
++    "task",
++    ["put the bowl on the plate", json.dumps({"task": "place", "objects": ["orange"], "containers": ["red bowl"]})],
++)
++def test_other_tasks_are_unchanged(task):
++    assert task_instruction(task) == task
++
++
++def test_raw_task_with_several_instructions_is_refused():
++    with pytest.raises(ValueError):
++        task_instruction(json.dumps({"task": "raw", "instructions": ["a", "b"]}))
++
++
++def test_build_optimizer():
++    params = [torch.nn.Parameter(torch.zeros(4096))]
++    assert isinstance(build_optimizer("adamw", params, lr=1e-4, weight_decay=0.0, betas=(0.9, 0.95)), torch.optim.AdamW)
++    with pytest.raises(ValueError):
++        build_optimizer("sgd", params, lr=1e-4, weight_decay=0.0, betas=(0.9, 0.95))
++
++
++@pytest.mark.skipif(not torch.cuda.is_available(), reason="bitsandbytes 8-bit kernels need CUDA")
++def test_adamw8bit_steps_on_gpu():
++    param = torch.nn.Parameter(torch.ones(8192, device="cuda"))
++    opt = build_optimizer("adamw8bit", [param], lr=1e-2, weight_decay=0.0, betas=(0.9, 0.95))
++    param.grad = torch.ones_like(param)
++    opt.step()
++    assert torch.all(param < 1)
++
++
++def test_chunk_params_keeps_every_group_under_the_limit():
++    params = [torch.nn.Parameter(torch.zeros(n)) for n in (6, 3, 3, 5, 1)]
++    groups = chunk_params(params, max_numel=8)
++    assert [[p.numel() for p in g] for g in groups] == [[6], [3, 3], [5, 1]]
++    assert [p for g in groups for p in g] == params
++    with pytest.raises(ValueError):
++        chunk_params([torch.nn.Parameter(torch.zeros(9))], max_numel=8)
++
++
++@pytest.mark.skipif(not torch.cuda.is_available(), reason="bitsandbytes 8-bit kernels need CUDA")
++def test_adamw8bit_splits_groups(monkeypatch):
++    monkeypatch.setattr(trainer, "MAX_8BIT_GROUP_NUMEL", 8192)
++    params = [torch.nn.Parameter(torch.ones(8192, device="cuda")) for _ in range(3)]
++    opt = build_optimizer("adamw8bit", params, lr=1e-2, weight_decay=0.0, betas=(0.9, 0.95))
++    assert len(opt.param_groups) == 3
++
++
++def test_retention_keeps_the_newest_state_and_sparse_weights(tmp_path):
++    cfg = _compose("sweep_bench_uncond_2cam224_1e-4")
++    state_dir, weights_dir = tmp_path / "state", tmp_path / "weights"
++    for step in (500, 1000, 1500, 2000, 2500):
++        (state_dir / f"step_{step:06d}").mkdir(parents=True)
++        weights_dir.mkdir(exist_ok=True)
++        (weights_dir / f"step_{step:06d}.pt").touch()
++    fake = types.SimpleNamespace(
++        keep_last_states=cfg.keep_last_states,
++        keep_weights_every=cfg.keep_weights_every,
++        state_dir=str(state_dir),
++        weights_dir=str(weights_dir),
++        global_step=2500,
++    )
++    trainer.Wan22Trainer._prune_checkpoints(fake)
++    assert sorted(p.name for p in state_dir.iterdir()) == ["step_002500"]
++    assert sorted(p.name for p in weights_dir.iterdir()) == ["step_002000.pt", "step_002500.pt"]
++
++
++def test_retention_defaults_keep_everything():
++    with initialize_config_dir(config_dir=CONFIG_DIR, version_base="1.3"):
++        base = compose(config_name="train")
++    assert base.keep_last_states is None and base.keep_weights_every is None
++
++
++def test_history_adds_t_minus_4_and_t_minus_2_and_nothing_else():
++    no_history = _compose("sweep_bench_uncond_2cam224_1e-4", "data.train.num_history_frames=0", "data.train.history_stride=2")
++    history = _compose("sweep_bench_uncond_2cam224_1e-4", "data.train.num_history_frames=2", "data.train.history_stride=2")
++    dt = history.data.train
++    offsets = build_image_delta_offsets(
++        dt.num_history_frames, dt.history_stride * dt.global_sample_stride, past_obs_size=0, obs_size=dt.num_frames
++    )
++    assert offsets[:2] == [-4, -2]
++    history.data.train.num_history_frames = 0
++    history.data.train.processor.num_history_frames = 0
++    assert history == no_history

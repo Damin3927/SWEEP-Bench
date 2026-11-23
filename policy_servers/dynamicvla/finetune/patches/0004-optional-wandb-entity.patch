@@ -1,0 +1,13 @@
+diff --git a/run.py b/run.py
+index ec19680..977cf03 100644
+--- a/run.py
++++ b/run.py
+@@ -97,6 +97,8 @@ def main():
+     with open(args.cfg_file) as fp:
+         cfg = yaml.load(fp, Loader=yaml.FullLoader)
+         cfg = easydict.EasyDict(cfg)
++    if "ENTITY" not in cfg.WANDB:
++        cfg.WANDB["ENTITY"] = None
+ 
+     # Parse runtime arguments
+     if args.gpus is not None:

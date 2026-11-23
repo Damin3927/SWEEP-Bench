@@ -1,0 +1,92 @@
+[project]
+name = "sweep-bench"
+version = "0.1.0"
+description = "Simulation benchmark of conveyor-belt manipulation tasks at controlled belt speeds"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Hiroaki Honda" },
+    { name = "Koya Sakamoto" },
+    { name = "Shu Morikuni" },
+    { name = "Yusuke Iwasawa" },
+    { name = "Taiki Miyanishi" },
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "gymnasium>=0.29.1",
+    "mani-skill>=3.0.0b22",
+    "numpy>=2.4.4",
+    "openpi-client",
+    "pin>=3.0 ; sys_platform == 'darwin'",
+    "pydantic>=2.13",
+    "sapien>=3.0.3",
+    "torch==2.11.0",
+    "torchvision==0.26.0",
+]
+
+[project.urls]
+Homepage = "https://damin3927.github.io/SWEEP-Bench"
+Repository = "https://github.com/Damin3927/SWEEP-Bench"
+Dataset = "https://huggingface.co/datasets/Damin3927/SWEEP-Bench"
+
+[project.optional-dependencies]
+data = [
+    "lerobot @ git+https://github.com/huggingface/lerobot@0cf864870cf29f4738d3ade893e6fd13fbd7cdb5",
+    "torchcodec==0.11.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+    "ty>=0.0.30",
+    "pytest>=8",
+]
+
+[tool.uv]
+override-dependencies = ["numpy>=2"]
+
+[tool.uv.sources]
+openpi-client = { git = "https://github.com/Physical-Intelligence/openpi.git", subdirectory = "packages/openpi-client" }
+torch = { index = "pytorch-cu126", marker = "sys_platform == 'linux'" }
+torchcodec = { index = "pytorch-cu126", marker = "sys_platform == 'linux'" }
+torchvision = { index = "pytorch-cu126", marker = "sys_platform == 'linux'" }
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+extend-exclude = [
+    "policy_servers/openpi/upstream",
+    "policy_servers/dynamicvla/upstream",
+    "policy_servers/groot/upstream",
+    "policy_servers/cosmospolicy/upstream",
+    "policy_servers/fastwam/upstream",
+    "policy_servers/openvlaoft/upstream",
+    "policy_servers/vlajepa/upstream",
+    ".venv",
+]
+per-file-target-version = { "policy_servers/dynamicvla/**" = "py310" }
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "TCH"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"policy_servers/openpi/finetune/bench_configs.py" = ["I001", "UP035"]
+"policy_servers/openpi/finetune/compute_norm_stats.py" = ["I001"]
+"policy_servers/openpi/finetune/train.py" = ["I001"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["sweep_bench"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
