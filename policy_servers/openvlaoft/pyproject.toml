@@ -1,0 +1,45 @@
+[project]
+name = "bench-openvlaoft"
+version = "0.1.0"
+description = "OpenVLA-OFT fine-tune and policy server for sweep-bench"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "torch==2.7.1",
+    "torchvision==0.22.1",
+    "numpy==1.26.4",
+    "transformers",
+    "tokenizers==0.19.1",
+    "timm==0.9.10",
+    "peft==0.11.1",
+    "accelerate==0.34.2",
+    "sentencepiece==0.1.99",
+    "diffusers==0.30.3",
+    "draccus==0.8.0",
+    "einops==0.8.1",
+    "pillow==12.3.0",
+    "rich==14.2.0",
+    "datasets==4.0.0",
+    "pyarrow==20.0.0",
+    "pydantic==2.14.1",
+    "huggingface-hub==0.34.4",
+    "jsonlines==4.0.0",
+    "safetensors==0.5.3",
+    "wandb==0.21.1",
+    "websockets==16.1.1",
+    "msgpack==1.2.3",
+    "setuptools==84.2.1",
+]
+
+[tool.uv]
+package = false
+override-dependencies = ["triton==3.3.1; platform_machine == 'x86_64'"]
+
+[tool.uv.sources]
+transformers = { git = "https://github.com/moojink/transformers-openvla-oft.git", rev = "bc339d9ad707454c0c115970db43c260067c61ab" }
+torch = [{ index = "pytorch-cu128" }]
+torchvision = [{ index = "pytorch-cu128" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

@@ -1,0 +1,25 @@
+[project]
+name = "bench-groot-server"
+version = "0.1.0"
+description = "GR00T N1.7 fine-tune and inference server for sweep-bench"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "gr00t",
+    "msgpack==1.1.0",
+    "pydantic==2.12.5",
+    "websockets==16.1.1",
+]
+
+[tool.uv]
+package = false
+override-dependencies = [
+    "tensorrt-cu13 ; sys_platform == 'never'",
+    "tensorrt-cu13-libs ; sys_platform == 'never'",
+]
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'linux' and platform_machine == 'aarch64'",
+]
+
+[tool.uv.sources]
+gr00t = { path = "upstream", editable = true }

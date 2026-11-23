@@ -1,0 +1,556 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SWEEP-Bench <sweep-bench@example.invalid>
+Date: Sat, 14 Nov 2026 00:00:00 +0000
+Subject: [PATCH 4/6] Past frames from a subset of the cameras
+
+data.train.history_camera_keys (default None: every camera) keeps only the
+named cameras in each history frame. The narrower history latent is
+right-padded to the current width and its padding tokens are hidden from
+attention, which equals a sequence without them. FastWAMIDM and
+infer_joint refuse narrow history.
+---
+ .../datasets/lerobot/robot_video_dataset.py   |  25 +-
+ src/fastwam/models/wan22/fastwam.py           |  73 +++++-
+ src/fastwam/models/wan22/fastwam_idm.py       |   2 +
+ src/fastwam/models/wan22/wan_video_dit.py     |   8 +
+ tests/test_exterior_history.py                | 230 ++++++++++++++++++
+ tests/test_sweep_bench_config.py              |  18 ++
+ 6 files changed, 347 insertions(+), 9 deletions(-)
+ create mode 100644 tests/test_exterior_history.py
+
+diff --git a/src/fastwam/datasets/lerobot/robot_video_dataset.py b/src/fastwam/datasets/lerobot/robot_video_dataset.py
+index d742696..f153073 100644
+--- a/src/fastwam/datasets/lerobot/robot_video_dataset.py
++++ b/src/fastwam/datasets/lerobot/robot_video_dataset.py
+@@ -1,6 +1,6 @@
+ import hashlib
+ import os
+-from typing import Optional
++from typing import Optional, Sequence
+ import time
+ import numpy as np
+ import traceback
+@@ -39,6 +39,7 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+         global_sample_stride=1,
+         num_history_frames: int = 0,
+         history_stride: int = 1,
++        history_camera_keys: Optional[Sequence[str]] = None,
+         action_video_freq_ratio: int = 1,
+         skip_padding_as_possible: bool = False,
+         max_padding_retry: int = 3,
+@@ -85,6 +86,16 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+         self.concat_multi_camera = concat_multi_camera
+         self.override_instruction = override_instruction
+ 
++        self.history_camera_indices = None
++        if history_camera_keys is not None:
++            if concat_multi_camera != "horizontal":
++                raise ValueError("`history_camera_keys` requires `concat_multi_camera='horizontal'`.")
++            camera_keys = [meta["key"] for meta in shape_meta["images"]]
++            unknown = [key for key in history_camera_keys if key not in camera_keys]
++            if unknown or len(history_camera_keys) == 0:
++                raise ValueError(f"`history_camera_keys` {list(history_camera_keys)} must name cameras of {camera_keys}.")
++            self.history_camera_indices = [camera_keys.index(key) for key in history_camera_keys]
++
+         self.resize_transform = ResizeSmallestSideAspectPreserving(
+             args={"img_w": self.video_size[1], "img_h": self.video_size[0]},
+         )
+@@ -257,11 +268,23 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+                 )
+             history = sample["history_pixel_values"]
+             history_video = self._process_multicam_video(history)
++            if self.history_camera_indices is not None:
++                history_video = self._select_history_cameras(history_video, num_cameras=history.shape[0])
+             data["history_video"] = history_video
+             data["history_is_pad"] = sample["history_is_pad"]
+ 
+         return data
+ 
++    def _select_history_cameras(self, history_video: torch.Tensor, num_cameras: int) -> torch.Tensor:
++        width = history_video.shape[-1]
++        if width % num_cameras != 0:
++            raise ValueError(f"History width {width} does not split into {num_cameras} equal camera columns.")
++        camera_w = width // num_cameras
++        return torch.cat(
++            [history_video[..., i * camera_w:(i + 1) * camera_w] for i in self.history_camera_indices],
++            dim=-1,
++        )
++
+     def _get_cached_text_context(self, prompt: str):
+         if self.text_embedding_cache_dir is None:
+             raise ValueError("text_embedding_cache_dir is not set.")
+diff --git a/src/fastwam/models/wan22/fastwam.py b/src/fastwam/models/wan22/fastwam.py
+index b764186..499b31a 100644
+--- a/src/fastwam/models/wan22/fastwam.py
++++ b/src/fastwam/models/wan22/fastwam.py
+@@ -11,7 +11,7 @@ from .action_dit import ActionDiT
+ from .helpers.loader import load_wan22_ti2v_5b_components
+ from .mot import MoT
+ from .schedulers.scheduler_continuous import WanContinuousFlowMatchScheduler
+-from .wan_video_dit import mask_padded_cond_tokens
++from .wan_video_dit import mask_hidden_cond_tokens, mask_padded_cond_tokens
+ 
+ logger = get_logger(__name__)
+ 
+@@ -270,6 +270,7 @@ class FastWAM(torch.nn.Module):
+         history_images: Optional[torch.Tensor],
+         height: int,
+         width: int,
++        allow_narrow: bool = False,
+     ) -> Optional[torch.Tensor]:
+         if history_images is None:
+             return None
+@@ -279,9 +280,11 @@ class FastWAM(torch.nn.Module):
+             )
+         if history_images.shape[0] == 0:
+             return None
+-        if history_images.shape[2] != height or history_images.shape[3] != width:
++        narrow = allow_narrow and history_images.shape[3] < width
++        if history_images.shape[2] != height or (history_images.shape[3] != width and not narrow):
+             raise ValueError(
+-                "`history_images` spatial dims must match `input_image`: "
++                "`history_images` spatial dims must match `input_image`"
++                f"{' (or be narrower)' if allow_narrow else ''}: "
+                 f"got {tuple(history_images.shape[2:])} vs ({height}, {width})"
+             )
+         return history_images
+@@ -322,6 +325,49 @@ class FastWAM(torch.nn.Module):
+         z = z.reshape(batch_size, num_history, z.shape[1], 1, z.shape[3], z.shape[4])
+         return z.squeeze(3).permute(0, 2, 1, 3, 4)
+ 
++    def _pad_narrow_history_latents(
++        self,
++        history_latents: torch.Tensor,
++        latent_width: int,
++    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
++        num_history, latent_h, history_w = history_latents.shape[2:]
++        if history_w == latent_width:
++            return history_latents, None
++        patch_h = int(self.video_expert.patch_size[1])
++        patch_w = int(self.video_expert.patch_size[2])
++        if history_w > latent_width or history_w % patch_w != 0:
++            raise ValueError(
++                f"History latent width {history_w} must be at most the current width {latent_width} "
++                f"and a multiple of the DiT patch width {patch_w}."
++            )
++        padded = F.pad(history_latents, (0, latent_width - history_w))
++        hidden = torch.zeros(
++            (num_history + 1, latent_h // patch_h, latent_width // patch_w),
++            dtype=torch.bool,
++            device=history_latents.device,
++        )
++        hidden[:num_history, :, history_w // patch_w:] = True
++        return padded, hidden.reshape(1, -1)
++
++    def _hide_cond_tokens(
++        self,
++        mask: torch.Tensor,
++        cond_is_pad: Optional[torch.Tensor],
++        video_tokens_per_frame: int,
++        cond_token_is_hidden: Optional[torch.Tensor],
++    ) -> torch.Tensor:
++        if cond_token_is_hidden is None:
++            return self._mask_padded_cond_tokens(
++                mask=mask,
++                cond_is_pad=cond_is_pad,
++                video_tokens_per_frame=video_tokens_per_frame,
++            )
++        if cond_is_pad is not None:
++            cond_token_is_hidden = cond_token_is_hidden.to(cond_is_pad.device) | cond_is_pad.repeat_interleave(
++                video_tokens_per_frame, dim=1
++            )
++        return mask_hidden_cond_tokens(mask, cond_token_is_hidden)
++
+     def _decode_latents(self, latents, tiled=False, tile_size=(30, 52), tile_stride=(15, 26)):
+         video_tensor = self.vae.decode(latents, device=self.device, tiled=tiled, tile_size=tile_size, tile_stride=tile_stride)
+         video_tensor = video_tensor.squeeze(0).detach().float().clamp(-1, 1)
+@@ -403,9 +449,9 @@ class FastWAM(torch.nn.Module):
+                 raise ValueError(
+                     f"`sample['history_video']` batch mismatch: got {history_video.shape[0]} vs {batch_size}"
+                 )
+-            if history_video.shape[3] != height or history_video.shape[4] != width:
++            if history_video.shape[3] != height or history_video.shape[4] > width:
+                 raise ValueError(
+-                    "`sample['history_video']` spatial dims must match `sample['video']`: "
++                    "`sample['history_video']` spatial dims must match the height of `sample['video']` and not exceed its width: "
+                     f"got {tuple(history_video.shape[3:])} vs ({height}, {width})"
+                 )
+             if not getattr(self.video_expert, "fuse_vae_embedding_in_latents", False):
+@@ -429,6 +475,7 @@ class FastWAM(torch.nn.Module):
+ 
+         cond_latents = None
+         cond_is_pad = None
++        cond_token_is_hidden = None
+         num_cond_latents = 1
+         fuse_flag = False
+         if getattr(self.video_expert, "fuse_vae_embedding_in_latents", False):
+@@ -439,6 +486,9 @@ class FastWAM(torch.nn.Module):
+                     history_video.to(device=self.device, dtype=self.torch_dtype, non_blocking=True),
+                     tiled=tiled,
+                 )
++                history_latents, cond_token_is_hidden = self._pad_narrow_history_latents(
++                    history_latents, latent_width=int(input_latents.shape[4])
++                )
+                 cond_latents = torch.cat([history_latents, cond_latents], dim=2)
+                 input_latents = torch.cat([history_latents, input_latents], dim=2)
+                 if history_is_pad is not None:
+@@ -482,6 +532,7 @@ class FastWAM(torch.nn.Module):
+             "input_latents": input_latents,
+             "cond_latents": cond_latents,
+             "cond_is_pad": cond_is_pad,
++            "cond_token_is_hidden": cond_token_is_hidden,
+             "num_cond_latents": num_cond_latents,
+             "fuse_vae_embedding_in_latents": fuse_flag,
+             "action": action,
+@@ -614,10 +665,11 @@ class FastWAM(torch.nn.Module):
+             device=video_tokens.device,
+             num_cond_frames=num_cond_latents,
+         )
+-        attention_mask = self._mask_padded_cond_tokens(
++        attention_mask = self._hide_cond_tokens(
+             mask=attention_mask,
+             cond_is_pad=inputs["cond_is_pad"],
+             video_tokens_per_frame=int(video_pre["meta"]["tokens_per_frame"]),
++            cond_token_is_hidden=inputs["cond_token_is_hidden"],
+         )
+         tokens_out = self.mot(
+             embeds_all={
+@@ -1090,7 +1142,7 @@ class FastWAM(torch.nn.Module):
+             raise ValueError(
+                 f"`input_image` must be resized before infer, expected multiples of 16 but got HxW=({height},{width})"
+             )
+-        history_images = self._validate_history_images(history_images, height=height, width=width)
++        history_images = self._validate_history_images(history_images, height=height, width=width, allow_narrow=True)
+         cond_is_pad = self._build_infer_cond_is_pad(history_images, history_is_pad)
+         num_history = 0 if history_images is None else int(history_images.shape[0])
+         num_cond_latents = num_history + 1
+@@ -1117,11 +1169,15 @@ class FastWAM(torch.nn.Module):
+ 
+         input_image = input_image.to(device=self.device, dtype=self.torch_dtype)
+         cond_latents = self._encode_input_image_latents_tensor(input_image=input_image, tiled=tiled)
++        cond_token_is_hidden = None
+         if history_images is not None:
+             history_latents = self._encode_history_image_latents(
+                 history_images.permute(1, 0, 2, 3).unsqueeze(0).to(device=self.device, dtype=self.torch_dtype),
+                 tiled=tiled,
+             )
++            history_latents, cond_token_is_hidden = self._pad_narrow_history_latents(
++                history_latents, latent_width=int(cond_latents.shape[4])
++            )
+             cond_latents = torch.cat([history_latents, cond_latents], dim=2)
+         fuse_flag = bool(getattr(self.video_expert, "fuse_vae_embedding_in_latents", False))
+ 
+@@ -1176,10 +1232,11 @@ class FastWAM(torch.nn.Module):
+             device=video_pre["tokens"].device,
+             num_cond_frames=num_cond_latents,
+         )
+-        attention_mask = self._mask_padded_cond_tokens(
++        attention_mask = self._hide_cond_tokens(
+             mask=attention_mask,
+             cond_is_pad=cond_is_pad,
+             video_tokens_per_frame=int(video_pre["meta"]["tokens_per_frame"]),
++            cond_token_is_hidden=cond_token_is_hidden,
+         )
+         if attention_mask.ndim == 4:
+             attention_mask = attention_mask[0, 0]
+diff --git a/src/fastwam/models/wan22/fastwam_idm.py b/src/fastwam/models/wan22/fastwam_idm.py
+index 8156b75..335d18c 100644
+--- a/src/fastwam/models/wan22/fastwam_idm.py
++++ b/src/fastwam/models/wan22/fastwam_idm.py
+@@ -60,6 +60,8 @@ class FastWAMIDM(FastWAMJoint):
+ 
+     def training_loss(self, sample, tiled: bool = False):
+         inputs = self.build_inputs(sample, tiled=tiled)
++        if inputs["cond_token_is_hidden"] is not None:
++            raise NotImplementedError("FastWAMIDM does not support history narrower than the current frame.")
+         input_latents = inputs["input_latents"]
+         batch_size = input_latents.shape[0]
+         context = inputs["context"]
+diff --git a/src/fastwam/models/wan22/wan_video_dit.py b/src/fastwam/models/wan22/wan_video_dit.py
+index adee795..bc68b76 100644
+--- a/src/fastwam/models/wan22/wan_video_dit.py
++++ b/src/fastwam/models/wan22/wan_video_dit.py
+@@ -162,6 +162,14 @@ def mask_padded_cond_tokens(
+     return mask.view(1, 1, total_seq_len, total_seq_len) & ~col_pad.view(batch_size, 1, 1, total_seq_len)
+ 
+ 
++def mask_hidden_cond_tokens(mask: torch.Tensor, cond_token_is_hidden: torch.Tensor) -> torch.Tensor:
++    batch_size, cond_token_len = cond_token_is_hidden.shape
++    total_seq_len = int(mask.shape[0])
++    col_hidden = torch.zeros((batch_size, total_seq_len), dtype=torch.bool, device=mask.device)
++    col_hidden[:, :cond_token_len] = cond_token_is_hidden.to(mask.device)
++    return mask.view(1, 1, total_seq_len, total_seq_len) & ~col_hidden.view(batch_size, 1, 1, total_seq_len)
++
++
+ class RMSNorm(nn.Module):
+     def __init__(self, dim, eps=1e-5):
+         super().__init__()
+diff --git a/tests/test_exterior_history.py b/tests/test_exterior_history.py
+new file mode 100644
+index 0000000..4cd98a9
+--- /dev/null
++++ b/tests/test_exterior_history.py
+@@ -0,0 +1,230 @@
++import pytest
++import torch
++from omegaconf import OmegaConf
++
++from fastwam.datasets.lerobot import robot_video_dataset
++from fastwam.models.wan22.fastwam_idm import FastWAMIDM
++
++from test_history_conditioning import ACTION_DIM, ACTION_HORIZON, BATCH, PROPRIO_DIM, TEXT_DIM, Z_DIM, build_model
++
++HEIGHT, WIDTH = 64, 128
++NARROW_WIDTH = WIDTH // 2
++NUM_FRAMES = 9
++NUM_HISTORY = 2
++
++
++def _sample(history_width=NARROW_WIDTH):
++    torch.manual_seed(1)
++    return {
++        "video": torch.rand(BATCH, 3, NUM_FRAMES, HEIGHT, WIDTH) * 2 - 1,
++        "action": torch.randn(BATCH, ACTION_HORIZON, ACTION_DIM),
++        "proprio": torch.randn(BATCH, ACTION_HORIZON, PROPRIO_DIM),
++        "context": torch.randn(BATCH, 5, TEXT_DIM),
++        "context_mask": torch.ones(BATCH, 5, dtype=torch.bool),
++        "action_is_pad": torch.zeros(BATCH, ACTION_HORIZON, dtype=torch.bool),
++        "image_is_pad": torch.zeros(BATCH, NUM_FRAMES, dtype=torch.bool),
++        "history_video": torch.rand(BATCH, 3, NUM_HISTORY, HEIGHT, history_width) * 2 - 1,
++        "history_is_pad": torch.tensor([[True, False], [False, False]]),
++    }
++
++
++def _infer(model, history_width=NARROW_WIDTH, history_is_pad=None):
++    torch.manual_seed(4)
++    return model.infer_action(
++        prompt=None,
++        input_image=torch.rand(1, 3, HEIGHT, WIDTH) * 2 - 1,
++        action_horizon=ACTION_HORIZON,
++        history_images=torch.rand(NUM_HISTORY, 3, HEIGHT, history_width) * 2 - 1,
++        history_is_pad=history_is_pad,
++        context=torch.randn(1, 5, TEXT_DIM),
++        context_mask=torch.ones(1, 5, dtype=torch.bool),
++        proprio=torch.randn(1, PROPRIO_DIM),
++        num_inference_steps=2,
++        seed=0,
++    )["action"]
++
++
++def _loss(model, sample):
++    torch.manual_seed(5)
++    loss, _ = model.training_loss(sample)
++    return loss.detach()
++
++
++def _fill_padding(model, value_seed):
++    original = model._pad_narrow_history_latents
++
++    def pad(history_latents, latent_width):
++        padded, hidden = original(history_latents, latent_width)
++        generator = torch.Generator().manual_seed(value_seed)
++        width = history_latents.shape[-1]
++        padded = padded.clone()
++        padded[..., width:] = 100 * torch.randn(padded[..., width:].shape, generator=generator)
++        return padded, hidden
++
++    model._pad_narrow_history_latents = pad
++
++
++def test_hidden_tokens_are_the_padding_columns_of_the_history_slots():
++    model = build_model()
++    history = torch.randn(1, Z_DIM, NUM_HISTORY, 4, 4)
++    padded, hidden = model._pad_narrow_history_latents(history, latent_width=8)
++    assert tuple(padded.shape) == (1, Z_DIM, NUM_HISTORY, 4, 8)
++    assert torch.equal(padded[..., :4], history)
++    expected = torch.zeros(NUM_HISTORY + 1, 2, 4, dtype=torch.bool)
++    for slot in range(NUM_HISTORY):
++        for col in (2, 3):
++            expected[slot, :, col] = True
++    assert torch.equal(hidden, expected.reshape(1, -1))
++
++
++def test_full_width_history_hides_nothing():
++    model = build_model()
++    history = torch.randn(1, Z_DIM, NUM_HISTORY, 4, 8)
++    padded, hidden = model._pad_narrow_history_latents(history, latent_width=8)
++    assert padded is history and hidden is None
++
++
++def test_padding_values_never_reach_the_loss_or_the_actions():
++    model = build_model()
++    sample = _sample()
++    loss_zero = _loss(model, sample)
++    action_zero = _infer(model)
++    _fill_padding(model, value_seed=11)
++    assert torch.equal(_loss(model, sample), loss_zero)
++    assert torch.equal(_infer(model), action_zero)
++
++
++def test_the_padding_would_leak_without_hiding_it():
++    model = build_model()
++    sample = _sample()
++    loss_zero = _loss(model, sample)
++    _fill_padding(model, value_seed=11)
++    hide = model._hide_cond_tokens
++    model._hide_cond_tokens = lambda mask, cond_is_pad, video_tokens_per_frame, cond_token_is_hidden: hide(
++        mask, cond_is_pad, video_tokens_per_frame, None
++    )
++    assert not torch.equal(_loss(model, sample), loss_zero)
++
++
++def test_equals_a_sequence_without_the_padding_tokens():
++    model = build_model()
++    sample = _sample()
++    loss_masked = _loss(model, sample)
++
++    tokens_per_frame = 2 * 4
++    num_video_tokens = (NUM_HISTORY + 3) * tokens_per_frame
++    keep = torch.ones(NUM_HISTORY + 3, 2, 4, dtype=torch.bool)
++    keep[:NUM_HISTORY, :, 2:] = False
++    keep = keep.reshape(-1)
++    assert keep.numel() == num_video_tokens
++
++    forward = model.mot.forward
++
++    def forward_without_padding(embeds_all, attention_mask, freqs_all, context_all, t_mod_all):
++        num_action = embeds_all["action"].shape[1]
++        keep_all = torch.cat([keep, torch.ones(num_action, dtype=torch.bool)])
++        video_context = dict(context_all["video"], mask=context_all["video"]["mask"][:, keep])
++        out = forward(
++            embeds_all={"video": embeds_all["video"][:, keep], "action": embeds_all["action"]},
++            attention_mask=attention_mask[..., keep_all, :][..., keep_all],
++            freqs_all={"video": freqs_all["video"][keep], "action": freqs_all["action"]},
++            context_all={"video": video_context, "action": context_all["action"]},
++            t_mod_all={"video": t_mod_all["video"][:, keep], "action": t_mod_all["action"]},
++        )
++        video = torch.zeros_like(embeds_all["video"])
++        video[:, keep] = out["video"]
++        return {"video": video, "action": out["action"]}
++
++    model.mot.forward = forward_without_padding
++    loss_dropped = _loss(model, sample)
++    assert torch.allclose(loss_dropped, loss_masked, rtol=1e-5, atol=1e-7)
++
++
++def test_padded_history_slots_stay_hidden_with_narrow_history():
++    model = build_model()
++    is_pad = torch.tensor([True, False])
++    action_a = _infer(model, history_is_pad=is_pad)
++    original = model._encode_history_image_latents
++
++    def encode(history_video, **kwargs):
++        latents = original(history_video, **kwargs).clone()
++        latents[:, :, 0] = torch.randn(latents[:, :, 0].shape, generator=torch.Generator().manual_seed(3))
++        return latents
++
++    model._encode_history_image_latents = encode
++    assert torch.equal(_infer(model, history_is_pad=is_pad), action_a)
++
++
++def test_rejects_history_wider_than_the_current_frame():
++    model = build_model()
++    with pytest.raises(ValueError, match="spatial dims"):
++        model.build_inputs(_sample(history_width=WIDTH + 32))
++    with pytest.raises(ValueError, match="spatial dims"):
++        _infer(model, history_width=WIDTH + 32)
++
++
++def test_rejects_a_width_that_splits_a_token():
++    model = build_model()
++    with pytest.raises(ValueError, match="multiple of the DiT patch width"):
++        model.build_inputs(_sample(history_width=WIDTH - 16))
++
++
++def test_idm_and_infer_joint_refuse_narrow_history():
++    with pytest.raises(NotImplementedError, match="narrower"):
++        build_model(cls=FastWAMIDM).training_loss(_sample())
++    model = build_model()
++    with pytest.raises(ValueError, match="spatial dims"):
++        model.infer_joint(
++            prompt=None,
++            input_image=torch.rand(1, 3, HEIGHT, WIDTH) * 2 - 1,
++            num_video_frames=NUM_FRAMES,
++            action_horizon=ACTION_HORIZON,
++            history_images=torch.rand(NUM_HISTORY, 3, HEIGHT, NARROW_WIDTH) * 2 - 1,
++            context=torch.randn(1, 5, TEXT_DIM),
++            context_mask=torch.ones(1, 5, dtype=torch.bool),
++            num_inference_steps=2,
++            seed=0,
++            test_action_with_infer_action=False,
++        )
++
++
++class _StubLerobotDataset:
++    def __init__(self, **kwargs):
++        pass
++
++    def _set_return_images(self, flag):
++        pass
++
++
++SHAPE_META = OmegaConf.create({"images": [{"key": "opst_cam"}, {"key": "wrist_cam"}]})
++
++
++def _dataset(monkeypatch, history_camera_keys):
++    monkeypatch.setattr(robot_video_dataset, "BaseLerobotDataset", _StubLerobotDataset)
++    return robot_video_dataset.RobotVideoDataset(
++        dataset_dirs=[],
++        shape_meta=SHAPE_META,
++        video_size=[224, 448],
++        history_camera_keys=history_camera_keys,
++    )
++
++
++def test_exterior_history_is_the_exterior_camera_of_the_two_camera_history(monkeypatch):
++    dataset = _dataset(monkeypatch, ["opst_cam"])
++    torch.manual_seed(9)
++    exterior = torch.rand(NUM_HISTORY, 3, 224, 224)
++    wrist = torch.rand(NUM_HISTORY, 3, 224, 224)
++    history = torch.stack([exterior, wrist])
++
++    full = dataset._process_multicam_video(history)
++    narrow = dataset._select_history_cameras(full, num_cameras=2)
++    assert tuple(narrow.shape) == (3, NUM_HISTORY, 224, 224)
++    assert torch.equal(narrow, full[..., :224])
++    assert torch.equal(narrow, dataset.normalize_transform(exterior).permute(1, 0, 2, 3))
++
++
++def test_history_camera_keys_default_keeps_every_camera(monkeypatch):
++    assert _dataset(monkeypatch, None).history_camera_indices is None
++    assert _dataset(monkeypatch, ["wrist_cam"]).history_camera_indices == [1]
++    with pytest.raises(ValueError, match="must name cameras"):
++        _dataset(monkeypatch, ["side_cam"])
+diff --git a/tests/test_sweep_bench_config.py b/tests/test_sweep_bench_config.py
+index 7c89c71..4a35ecc 100644
+--- a/tests/test_sweep_bench_config.py
++++ b/tests/test_sweep_bench_config.py
+@@ -5,6 +5,7 @@ from pathlib import Path
+ import pytest
+ import torch
+ from hydra import compose, initialize_config_dir
++from omegaconf import OmegaConf
+ 
+ from fastwam import trainer
+ from fastwam.datasets.lerobot.base_lerobot_dataset import build_image_delta_offsets
+@@ -129,3 +130,20 @@ def test_history_adds_t_minus_4_and_t_minus_2_and_nothing_else():
+     history.data.train.num_history_frames = 0
+     history.data.train.processor.num_history_frames = 0
+     assert history == no_history
++
++
++def test_exterior_history_differs_from_two_camera_history_only_in_the_history_cameras():
++    two_camera = _compose("sweep_bench_uncond_2cam224_1e-4", "data.train.num_history_frames=2", "data.train.history_stride=2")
++    exterior = _compose(
++        "sweep_bench_uncond_2cam224_1e-4",
++        "data.train.num_history_frames=2",
++        "data.train.history_stride=2",
++        "+data.train.history_camera_keys=[opst_cam]",
++    )
++    assert [meta.key for meta in exterior.data.train.shape_meta.images][0] == "opst_cam"
++    assert list(exterior.data.train.history_camera_keys) == ["opst_cam"]
++    exterior_container = OmegaConf.to_container(exterior, resolve=True)
++    two_camera_container = OmegaConf.to_container(two_camera, resolve=True)
++    del exterior_container["data"]["train"]["history_camera_keys"]
++    exterior_container["output_dir"] = two_camera_container["output_dir"]
++    assert exterior_container == two_camera_container

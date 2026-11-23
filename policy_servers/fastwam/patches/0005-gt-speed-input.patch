@@ -1,0 +1,383 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SWEEP-Bench <sweep-bench@example.invalid>
+Date: Sat, 14 Nov 2026 00:00:00 +0000
+Subject: [PATCH 5/6] Ground-truth belt speed as one more proprio channel
+
+data.train.speed_list (per-episode belt speeds) appends the encoded speed
+(v - 0.25) / 0.15 to every proprio row. model.speed_conditioned adds a
+zero-initialized weight for it, so the first forward equals the plain
+model's.
+---
+ configs/model/fastwam.yaml                    |   1 +
+ .../datasets/lerobot/robot_video_dataset.py   |  24 ++++
+ src/fastwam/models/wan22/fastwam.py           |  20 +++
+ src/fastwam/runtime.py                        |   2 +
+ src/fastwam/utils/belt_speed.py               |   6 +
+ tests/test_gt_speed.py                        | 136 ++++++++++++++++++
+ tests/test_history_conditioning.py            |   3 +-
+ tests/test_sweep_bench_config.py              |  19 +++
+ 8 files changed, 210 insertions(+), 1 deletion(-)
+ create mode 100644 src/fastwam/utils/belt_speed.py
+ create mode 100644 tests/test_gt_speed.py
+
+diff --git a/configs/model/fastwam.yaml b/configs/model/fastwam.yaml
+index 985d21d..0efcf03 100644
+--- a/configs/model/fastwam.yaml
++++ b/configs/model/fastwam.yaml
+@@ -4,6 +4,7 @@ tokenizer_model_id: Wan-AI/Wan2.1-T2V-1.3B
+ tokenizer_max_len: 128
+ load_text_encoder: false
+ proprio_dim: ${data.train.processor.proprio_output_dim}
++speed_conditioned: false
+ redirect_common_files: true
+ mot_checkpoint_mixed_attn: true
+ action_dit_pretrained_path: checkpoints/ActionDiT_linear_interp_Wan22_alphascale_1024hdim.pt
+diff --git a/src/fastwam/datasets/lerobot/robot_video_dataset.py b/src/fastwam/datasets/lerobot/robot_video_dataset.py
+index f153073..11387f7 100644
+--- a/src/fastwam/datasets/lerobot/robot_video_dataset.py
++++ b/src/fastwam/datasets/lerobot/robot_video_dataset.py
+@@ -1,4 +1,6 @@
+ import hashlib
++import json
++import math
+ import os
+ from typing import Optional, Sequence
+ import time
+@@ -14,6 +16,7 @@ from hydra.utils import instantiate
+ from .base_lerobot_dataset import BaseLerobotDataset
+ from .utils.normalizer import save_dataset_stats_to_json, load_dataset_stats_from_json
+ from ..dataset_utils import ResizeSmallestSideAspectPreserving, CenterCrop, Normalize
++from fastwam.utils.belt_speed import encode_speed
+ from fastwam.utils.logging_config import get_logger
+ from fastwam.utils import misc, pytorch_utils
+ from accelerate import PartialState
+@@ -40,6 +43,7 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+         num_history_frames: int = 0,
+         history_stride: int = 1,
+         history_camera_keys: Optional[Sequence[str]] = None,
++        speed_list: Optional[str] = None,
+         action_video_freq_ratio: int = 1,
+         skip_padding_as_possible: bool = False,
+         max_padding_retry: int = 3,
+@@ -86,6 +90,18 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+         self.concat_multi_camera = concat_multi_camera
+         self.override_instruction = override_instruction
+ 
++        self.speeds = None
++        if speed_list is not None:
++            if len(dataset_dirs) != 1:
++                raise ValueError("`speed_list` is indexed by one dataset's episode_index; got several datasets.")
++            speeds = json.loads(open(speed_list).read())
++            total = self.lerobot_dataset.multi_dataset._datasets[0].meta.total_episodes
++            if not (isinstance(speeds, list) and len(speeds) == total and all(
++                isinstance(v, (int, float)) and math.isfinite(v) and v > 0 for v in speeds
++            )):
++                raise ValueError(f"`speed_list` {speed_list} must hold {total} positive speeds, one per episode.")
++            self.speeds = [float(v) for v in speeds]
++
+         self.history_camera_indices = None
+         if history_camera_keys is not None:
+             if concat_multi_camera != "horizontal":
+@@ -229,6 +245,9 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+         #   proprio: [num_frames, proprio_dim] # start from t0 to the last frame, aligned with video frames
+         action = sample["action"] # [T-1, action_dim]
+         proprio = sample["proprio"][:-1, :] # [T-1, state_dim]， to align with action
++        if self.speeds is not None:
++            speed = encode_speed(self.speeds[self._episode_of(int(sample["idx"]))])
++            proprio = torch.cat([proprio, torch.full_like(proprio[:, :1], speed)], dim=-1)
+         if video.shape[1] <= 1:
+             raise ValueError(f"`video` must have at least 2 frames, got shape {tuple(video.shape)}")
+         if action.shape[0] % (video.shape[1] - 1) != 0:
+@@ -275,6 +294,11 @@ class RobotVideoDataset(torch.utils.data.Dataset):
+ 
+         return data
+ 
++    def _episode_of(self, frame_idx: int) -> int:
++        position = int(torch.searchsorted(self.lerobot_dataset.episode_data_index["to"], torch.tensor(frame_idx), right=True))
++        episodes = self.lerobot_dataset.multi_dataset._datasets[0].episodes
++        return position if episodes is None else int(episodes[position])
++
+     def _select_history_cameras(self, history_video: torch.Tensor, num_cameras: int) -> torch.Tensor:
+         width = history_video.shape[-1]
+         if width % num_cameras != 0:
+diff --git a/src/fastwam/models/wan22/fastwam.py b/src/fastwam/models/wan22/fastwam.py
+index 499b31a..6ba55c0 100644
+--- a/src/fastwam/models/wan22/fastwam.py
++++ b/src/fastwam/models/wan22/fastwam.py
+@@ -16,6 +16,17 @@ from .wan_video_dit import mask_hidden_cond_tokens, mask_padded_cond_tokens
+ logger = get_logger(__name__)
+ 
+ 
++class SpeedProprioEncoder(nn.Module):
++    def __init__(self, state: nn.Linear):
++        super().__init__()
++        self.state = state
++        self.speed = nn.utils.skip_init(nn.Linear, 1, state.out_features, bias=False, dtype=state.weight.dtype)
++        nn.init.zeros_(self.speed.weight)
++
++    def forward(self, proprio: torch.Tensor) -> torch.Tensor:
++        return self.state(proprio[..., :-1].contiguous()) + self.speed(proprio[..., -1:])
++
++
+ class FastWAM(torch.nn.Module):
+     """MoT world model with video/action experts."""
+ 
+@@ -29,6 +40,7 @@ class FastWAM(torch.nn.Module):
+         tokenizer=None,
+         text_dim: Optional[int] = None,
+         proprio_dim: Optional[int] = None,
++        speed_conditioned: bool = False,
+         device: str = "cpu",
+         torch_dtype: torch.dtype = torch.float32,
+         video_train_shift: float = 5.0,
+@@ -60,6 +72,12 @@ class FastWAM(torch.nn.Module):
+             self.proprio_encoder = nn.Linear(self.proprio_dim, self.text_dim).to(torch_dtype)
+         else:
+             self.proprio_encoder = None
++        self.speed_conditioned = bool(speed_conditioned)
++        if self.speed_conditioned:
++            if self.proprio_encoder is None:
++                raise ValueError("`speed_conditioned` needs a proprio encoder, so set `proprio_dim`.")
++            self.proprio_encoder = SpeedProprioEncoder(self.proprio_encoder)
++            self.proprio_dim += 1
+ 
+         self.train_video_scheduler = WanContinuousFlowMatchScheduler(
+             num_train_timesteps=video_num_train_timesteps,
+@@ -98,6 +116,7 @@ class FastWAM(torch.nn.Module):
+         tokenizer_max_len: int = 512,
+         load_text_encoder: bool = True,
+         proprio_dim: Optional[int] = None,
++        speed_conditioned: bool = False,
+         redirect_common_files: bool = True,
+         video_dit_config: dict[str, Any] | None = None,
+         action_dit_config: dict[str, Any] | None = None,
+@@ -159,6 +178,7 @@ class FastWAM(torch.nn.Module):
+             tokenizer=components.tokenizer,
+             text_dim=int(video_dit_config["text_dim"]),
+             proprio_dim=proprio_dim,
++            speed_conditioned=speed_conditioned,
+             device=device,
+             torch_dtype=torch_dtype,
+             video_train_shift=video_train_shift,
+diff --git a/src/fastwam/runtime.py b/src/fastwam/runtime.py
+index bb8ae13..2614f57 100644
+--- a/src/fastwam/runtime.py
++++ b/src/fastwam/runtime.py
+@@ -80,6 +80,7 @@ def create_fastwam(
+     tokenizer_max_len: int = 512,
+     load_text_encoder: bool = True,
+     proprio_dim: int | None = None,
++    speed_conditioned: bool = False,
+     action_dit_config=None,
+     action_dit_pretrained_path: str | None = None,
+     skip_dit_load_from_pretrain: bool = False,
+@@ -141,6 +142,7 @@ def create_fastwam(
+         tokenizer_max_len=int(tokenizer_max_len),
+         load_text_encoder=bool(load_text_encoder),
+         proprio_dim=(None if proprio_dim is None else int(proprio_dim)),
++        speed_conditioned=bool(speed_conditioned),
+         redirect_common_files=bool(redirect_common_files),
+         video_dit_config=video_dit_config,
+         action_dit_config=action_dit_config,
+diff --git a/src/fastwam/utils/belt_speed.py b/src/fastwam/utils/belt_speed.py
+new file mode 100644
+index 0000000..2110edd
+--- /dev/null
++++ b/src/fastwam/utils/belt_speed.py
+@@ -0,0 +1,6 @@
++SPEED_CENTER = 0.25
++SPEED_SCALE = 0.15
++
++
++def encode_speed(speed: float) -> float:
++    return (speed - SPEED_CENTER) / SPEED_SCALE
+diff --git a/tests/test_gt_speed.py b/tests/test_gt_speed.py
+new file mode 100644
+index 0000000..4cc5198
+--- /dev/null
++++ b/tests/test_gt_speed.py
+@@ -0,0 +1,136 @@
++import json
++from pathlib import Path
++from types import SimpleNamespace
++
++import pytest
++import torch
++from omegaconf import OmegaConf
++
++from fastwam.datasets.lerobot import robot_video_dataset
++from fastwam.utils.belt_speed import encode_speed
++
++from test_history_conditioning import (
++    ACTION_HORIZON,
++    HEIGHT,
++    PROPRIO_DIM,
++    TEXT_DIM,
++    WIDTH,
++    build_model,
++    build_sample,
++)
++
++SPEEDS = (0.12, 0.37)
++
++
++def _with_speed(sample: dict) -> dict:
++    proprio = sample["proprio"]
++    speed = torch.tensor([encode_speed(v) for v in SPEEDS]).view(-1, 1, 1).expand(-1, proprio.shape[1], 1)
++    return {**sample, "proprio": torch.cat([proprio, speed], dim=-1)}
++
++
++def _loss(model, sample: dict) -> torch.Tensor:
++    torch.manual_seed(5)
++    loss, _ = model.training_loss(sample)
++    return loss
++
++
++def _action(model, proprio: torch.Tensor) -> torch.Tensor:
++    torch.manual_seed(4)
++    return model.infer_action(
++        prompt=None,
++        input_image=torch.rand(1, 3, HEIGHT, WIDTH) * 2 - 1,
++        action_horizon=ACTION_HORIZON,
++        context=torch.randn(1, 5, TEXT_DIM),
++        context_mask=torch.ones(1, 5, dtype=torch.bool),
++        proprio=proprio,
++        num_inference_steps=2,
++        seed=0,
++    )["action"]
++
++
++def test_the_speed_weight_starts_at_zero_and_every_other_weight_is_the_plain_models() -> None:
++    plain, conditioned = build_model(), build_model(speed_conditioned=True)
++    assert conditioned.proprio_dim == PROPRIO_DIM + 1
++    assert not conditioned.proprio_encoder.speed.weight.any()
++    renamed = {k.replace("proprio_encoder.state.", "proprio_encoder."): v for k, v in conditioned.state_dict().items()}
++    del renamed["proprio_encoder.speed.weight"]
++    plain_state = plain.state_dict()
++    assert plain_state.keys() == renamed.keys()
++    for key in plain_state:
++        assert torch.equal(plain_state[key], renamed[key]), key
++
++
++def test_the_first_loss_and_actions_are_the_plain_models() -> None:
++    plain, conditioned = build_model(), build_model(speed_conditioned=True)
++    sample = build_sample(num_history=2)
++    assert torch.equal(_loss(conditioned, _with_speed(sample)), _loss(plain, sample))
++    proprio = torch.randn(1, PROPRIO_DIM)
++    for speed in (0.10, 0.40):
++        with_speed = torch.cat([proprio, torch.tensor([[encode_speed(speed)]])], dim=-1)
++        assert torch.equal(_action(conditioned, with_speed), _action(plain, proprio))
++
++
++def test_the_speed_weight_gets_a_gradient() -> None:
++    conditioned = build_model(speed_conditioned=True)
++    _loss(conditioned, _with_speed(build_sample(num_history=2))).backward()
++    grad = conditioned.proprio_encoder.speed.weight.grad
++    assert grad is not None
++    assert grad.abs().sum() > 0
++
++
++def test_a_proprio_of_the_other_width_is_refused() -> None:
++    sample = build_sample(num_history=2)
++    with pytest.raises(ValueError, match="last dim"):
++        build_model(speed_conditioned=True).training_loss(sample)
++    with pytest.raises(ValueError, match="last dim"):
++        build_model().training_loss(_with_speed(sample))
++
++
++def test_the_encoding_maps_the_trained_range_to_plus_minus_one() -> None:
++    assert encode_speed(0.10) == pytest.approx(-1.0)
++    assert encode_speed(0.25) == pytest.approx(0.0)
++    assert encode_speed(0.40) == pytest.approx(1.0)
++
++
++class _StubLerobotDataset:
++    def __init__(self, total: int = 4, episodes=None, lengths=(3, 2, 4, 1)) -> None:
++        ends = torch.tensor(lengths).cumsum(0)
++        self.episode_data_index = {"from": ends - torch.tensor(lengths), "to": ends}
++        inner = SimpleNamespace(meta=SimpleNamespace(total_episodes=total), episodes=episodes)
++        self.multi_dataset = SimpleNamespace(_datasets=[inner])
++
++    def _set_return_images(self, flag: bool) -> None:
++        pass
++
++
++SHAPE_META = OmegaConf.create({"images": [{"key": "opst_cam"}, {"key": "wrist_cam"}]})
++
++
++def _dataset(monkeypatch, tmp_path: Path, speeds, dataset_dirs=("d",), **stub):
++    monkeypatch.setattr(robot_video_dataset, "BaseLerobotDataset", lambda **_k: _StubLerobotDataset(**stub))
++    path = tmp_path / "speeds.json"
++    path.write_text(json.dumps(speeds))
++    return robot_video_dataset.RobotVideoDataset(
++        dataset_dirs=list(dataset_dirs), shape_meta=SHAPE_META, video_size=[224, 448], speed_list=str(path)
++    )
++
++
++def test_each_frame_maps_to_its_own_episode(monkeypatch, tmp_path: Path) -> None:
++    dataset = _dataset(monkeypatch, tmp_path, [0.1, 0.2, 0.3, 0.4])
++    assert [dataset._episode_of(i) for i in range(10)] == [0, 0, 0, 1, 1, 2, 2, 2, 2, 3]
++
++
++def test_an_episode_subset_maps_to_the_global_episode(monkeypatch, tmp_path: Path) -> None:
++    dataset = _dataset(monkeypatch, tmp_path, [0.1, 0.2, 0.3, 0.4], episodes=[3, 0, 2], lengths=(1, 3, 4))
++    assert [dataset._episode_of(i) for i in range(8)] == [3, 0, 0, 0, 2, 2, 2, 2]
++
++
++@pytest.mark.parametrize("speeds", [[0.1, 0.2, 0.3], [0.1, 0.2, 0.3, -0.4], [0.1, 0.2, 0.3, "fast"]])
++def test_a_list_that_does_not_cover_the_dataset_is_refused(monkeypatch, tmp_path: Path, speeds) -> None:
++    with pytest.raises(ValueError, match="positive speeds"):
++        _dataset(monkeypatch, tmp_path, speeds)
++
++
++def test_a_list_for_several_datasets_is_refused(monkeypatch, tmp_path: Path) -> None:
++    with pytest.raises(ValueError, match="one dataset"):
++        _dataset(monkeypatch, tmp_path, [0.1, 0.2, 0.3, 0.4], dataset_dirs=("a", "b"))
+diff --git a/tests/test_history_conditioning.py b/tests/test_history_conditioning.py
+index 7f6f9f3..09ecc4e 100644
+--- a/tests/test_history_conditioning.py
++++ b/tests/test_history_conditioning.py
+@@ -56,7 +56,7 @@ class FakeVAE(torch.nn.Module):
+         return torch.stack(vids).to(device)
+ 
+ 
+-def build_model(cls=FastWAM, action_conditioned=False):
++def build_model(cls=FastWAM, action_conditioned=False, **model_kwargs):
+     torch.manual_seed(0)
+     video_expert = WanVideoDiT(
+         hidden_dim=48,
+@@ -107,6 +107,7 @@ def build_model(cls=FastWAM, action_conditioned=False):
+         proprio_dim=PROPRIO_DIM,
+         device="cpu",
+         torch_dtype=torch.float32,
++        **model_kwargs,
+     )
+ 
+ 
+diff --git a/tests/test_sweep_bench_config.py b/tests/test_sweep_bench_config.py
+index 4a35ecc..0679f29 100644
+--- a/tests/test_sweep_bench_config.py
++++ b/tests/test_sweep_bench_config.py
+@@ -147,3 +147,22 @@ def test_exterior_history_differs_from_two_camera_history_only_in_the_history_ca
+     del exterior_container["data"]["train"]["history_camera_keys"]
+     exterior_container["output_dir"] = two_camera_container["output_dir"]
+     assert exterior_container == two_camera_container
++
++
++def test_gt_speed_differs_from_exterior_history_only_in_the_speed_channel():
++    exterior_history = (
++        "sweep_bench_uncond_2cam224_1e-4",
++        "data.train.num_history_frames=2",
++        "data.train.history_stride=2",
++        "+data.train.history_camera_keys=[opst_cam]",
++    )
++    exterior = OmegaConf.to_container(_compose(*exterior_history), resolve=True)
++    gt = OmegaConf.to_container(
++        _compose(*exterior_history, "+data.train.speed_list=/x/belt_speed.json", "model.speed_conditioned=true"),
++        resolve=True,
++    )
++    assert gt["model"]["speed_conditioned"] is True and exterior["model"]["speed_conditioned"] is False
++    assert gt["data"]["train"].pop("speed_list") == "/x/belt_speed.json"
++    gt["model"]["speed_conditioned"] = False
++    gt["output_dir"] = exterior["output_dir"]
++    assert gt == exterior

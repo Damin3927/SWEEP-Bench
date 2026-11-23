@@ -1,0 +1,7 @@
+policy_servers/cosmospolicy/upstream https://github.com/NVlabs/cosmos-policy 18a2accadf4e7a3531e56754102af5a24d2316da
+policy_servers/dynamicvla/upstream https://github.com/hzxie/DynamicVLA.git a27a06d2ca74d0e987a5e552e01013073e93cfd8
+policy_servers/fastwam/upstream https://github.com/yuantianyuan01/FastWAM.git 45d8e1458921d83f8ad6cf9ce993d371208dabd0
+policy_servers/groot/upstream https://github.com/NVIDIA/Isaac-GR00T 944fe70c4fd54e3fcb80a7d7258a328f9c061176
+policy_servers/openpi/upstream https://github.com/Physical-Intelligence/openpi.git 650c5b0283a49c42784fb5055a0507da2c6d347d
+policy_servers/openvlaoft/upstream https://github.com/moojink/openvla-oft.git e4287e94541f459edc4feabc4e181f537cd569a8
+policy_servers/vlajepa/upstream https://github.com/ginwind/VLA-JEPA.git ec907778b4af46a45742baf5ebfb2e055560346e

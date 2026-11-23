@@ -1,0 +1,523 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: SWEEP-Bench <sweep-bench@example.invalid>
+Date: Sat, 14 Nov 2026 00:00:00 +0000
+Subject: [PATCH 6/6] Replay infer_action from one CUDA graph
+
+GraphedActionInfer captures FastWAM.infer_action at a fixed serving shape
+into one CUDA graph; its action chunks are bitwise equal to infer_action's.
+Opt-in: the default inference path is unchanged.
+---
+ src/fastwam/models/wan22/graphed_infer.py | 306 ++++++++++++++++++++++
+ tests/test_graphed_infer.py               | 190 ++++++++++++++
+ 2 files changed, 496 insertions(+)
+ create mode 100644 src/fastwam/models/wan22/graphed_infer.py
+ create mode 100644 tests/test_graphed_infer.py
+
+diff --git a/src/fastwam/models/wan22/graphed_infer.py b/src/fastwam/models/wan22/graphed_infer.py
+new file mode 100644
+index 0000000..25c74f7
+--- /dev/null
++++ b/src/fastwam/models/wan22/graphed_infer.py
+@@ -0,0 +1,306 @@
++from __future__ import annotations
++
++import contextlib
++from collections.abc import Iterator
++from typing import Optional, TypedDict, Union
++
++import torch
++
++from .fastwam import FastWAM
++from .wan_video_dit import flash_attention, modulate
++
++
++class _GraphShapeRequired(TypedDict):
++    height: int
++    width: int
++    num_history: int
++    history_width: int
++    context_len: int
++    action_horizon: int
++    num_inference_steps: int
++
++
++class GraphShape(_GraphShapeRequired, total=False):
++    sigma_shift: Optional[float]
++    reuse_step_invariants: bool
++    warmup_iters: int
++
++
++class ActionResult(TypedDict):
++    action: torch.Tensor
++
++
++@contextlib.contextmanager
++def device_resident_constants(model: FastWAM) -> Iterator[list[torch.Tensor]]:
++    video, action, vae = model.video_expert, model.action_expert, model.vae
++    saved_video, saved_action = video.freqs, action.freqs
++    saved_scale: Optional[list[Union[torch.Tensor, float]]] = getattr(vae, "scale", None)
++    moved: list[torch.Tensor] = []
++
++    def to_device(tensor: torch.Tensor) -> torch.Tensor:
++        moved.append(tensor.to(model.device))
++        return moved[-1]
++
++    video.freqs = tuple(to_device(f) for f in saved_video)
++    action.freqs = to_device(saved_action)
++    if saved_scale is not None:
++        vae.scale = [to_device(s) if isinstance(s, torch.Tensor) else s for s in saved_scale]
++    try:
++        yield moved
++    finally:
++        video.freqs, action.freqs = saved_video, saved_action
++        if saved_scale is not None:
++            vae.scale = saved_scale
++
++
++class GraphedActionInfer:
++    def __init__(
++        self,
++        model: FastWAM,
++        *,
++        height: int,
++        width: int,
++        num_history: int,
++        history_width: int,
++        context_len: int,
++        action_horizon: int,
++        num_inference_steps: int,
++        sigma_shift: Optional[float] = None,
++        reuse_step_invariants: bool = True,
++        warmup_iters: int = 3,
++    ) -> None:
++        if model.device.type != "cuda":
++            raise ValueError(f"CUDA graphs need the model on a CUDA device, got {model.device}")
++        if str(getattr(model.video_expert, "video_attention_mask_mode", "")) != "first_frame_causal":
++            raise ValueError("`infer_action` requires `video_attention_mask_mode='first_frame_causal'`.")
++        model.eval()
++        self.model = model
++        self.action_horizon = int(action_horizon)
++        self.num_inference_steps = int(num_inference_steps)
++        self.num_history = int(num_history)
++        self.reuse_step_invariants = bool(reuse_step_invariants)
++        device, dtype = model.device, model.torch_dtype
++        self.image = torch.zeros((1, 3, height, width), device=device, dtype=dtype)
++        self.history = (
++            torch.zeros((self.num_history, 3, height, history_width), device=device, dtype=dtype)
++            if self.num_history > 0
++            else None
++        )
++        self.noise = torch.zeros((1, self.action_horizon, model.action_expert.action_dim), device=device, dtype=dtype)
++        self.context = torch.zeros((1, context_len, model.text_dim), device=device, dtype=dtype)
++        self.context_mask = torch.ones((1, context_len), device=device, dtype=torch.bool)
++        self.proprio = (
++            None if model.proprio_dim is None else torch.zeros((1, model.proprio_dim), device=device, dtype=dtype)
++        )
++        self.timesteps, self.deltas = model.infer_action_scheduler.build_inference_schedule(
++            num_inference_steps=self.num_inference_steps,
++            device=device,
++            dtype=dtype,
++            shift_override=sigma_shift,
++        )
++
++        with torch.no_grad(), torch.cuda.device(device), device_resident_constants(model) as constants:
++            self._constants = constants
++            cond_latents = model._encode_input_image_latents_tensor(input_image=self.image)
++            self.cond_token_is_hidden: Optional[torch.Tensor] = None
++            num_latent_frames = 1
++            if self.history is not None:
++                history_latents = model._encode_history_image_latents(self.history.permute(1, 0, 2, 3).unsqueeze(0))
++                history_latents, self.cond_token_is_hidden = model._pad_narrow_history_latents(
++                    history_latents, latent_width=int(cond_latents.shape[4])
++                )
++                num_latent_frames += int(history_latents.shape[2])
++            patch_h, patch_w = int(model.video_expert.patch_size[1]), int(model.video_expert.patch_size[2])
++            self.tokens_per_frame = (int(cond_latents.shape[3]) // patch_h) * (int(cond_latents.shape[4]) // patch_w)
++            self.video_seq_len = num_latent_frames * self.tokens_per_frame
++            self.attention_mask = self._build_attention_mask(self.history, None).clone()
++
++            side = torch.cuda.Stream(device=device)
++            side.wait_stream(torch.cuda.current_stream(device))
++            with torch.cuda.stream(side):
++                for _ in range(warmup_iters):
++                    self._forward()
++            torch.cuda.current_stream(device).wait_stream(side)
++            self.graph = torch.cuda.CUDAGraph()
++            with torch.cuda.graph(self.graph):
++                self.action = self._forward()
++
++    def _build_attention_mask(
++        self, history_images: Optional[torch.Tensor], history_is_pad: Optional[torch.Tensor]
++    ) -> torch.Tensor:
++        model = self.model
++        mask = model._build_mot_attention_mask(
++            video_seq_len=self.video_seq_len,
++            action_seq_len=self.action_horizon,
++            video_tokens_per_frame=self.tokens_per_frame,
++            device=model.device,
++            num_cond_frames=self.num_history + 1,
++        )
++        mask = model._hide_cond_tokens(
++            mask=mask,
++            cond_is_pad=model._build_infer_cond_is_pad(history_images, history_is_pad),
++            video_tokens_per_frame=self.tokens_per_frame,
++            cond_token_is_hidden=self.cond_token_is_hidden,
++        )
++        return mask[0, 0] if mask.ndim == 4 else mask
++
++    def _forward(self) -> torch.Tensor:
++        model = self.model
++        cond_latents = model._encode_input_image_latents_tensor(input_image=self.image)
++        if self.history is not None:
++            history_latents = model._encode_history_image_latents(self.history.permute(1, 0, 2, 3).unsqueeze(0))
++            history_latents, _ = model._pad_narrow_history_latents(
++                history_latents, latent_width=int(cond_latents.shape[4])
++            )
++            cond_latents = torch.cat([history_latents, cond_latents], dim=2)
++        context, context_mask = model._append_proprio_to_context(
++            context=self.context, context_mask=self.context_mask, proprio=self.proprio
++        )
++        timestep_video = torch.zeros((cond_latents.shape[0],), dtype=cond_latents.dtype, device=model.device)
++        video_pre = model.video_expert.pre_dit(
++            x=cond_latents,
++            timestep=timestep_video,
++            context=context,
++            context_mask=context_mask,
++            action=None,
++            fuse_vae_embedding_in_latents=bool(getattr(model.video_expert, "fuse_vae_embedding_in_latents", False)),
++            num_cond_latents=self.num_history + 1,
++        )
++        if int(video_pre["tokens"].shape[1]) != self.video_seq_len:
++            raise RuntimeError(f"video sequence {video_pre['tokens'].shape[1]} != {self.video_seq_len}")
++        video_kv_cache = model.mot.prefill_video_cache(
++            video_tokens=video_pre["tokens"],
++            video_freqs=video_pre["freqs"],
++            video_t_mod=video_pre["t_mod"],
++            video_context_payload={"context": video_pre["context"], "mask": video_pre["context_mask"]},
++            video_attention_mask=self.attention_mask[: self.video_seq_len, : self.video_seq_len],
++        )
++        latents = self.noise
++        if self.reuse_step_invariants:
++            return self._denoise_reusing_invariants(latents, context, context_mask, video_kv_cache)
++        for step_t, step_delta in zip(self.timesteps, self.deltas):
++            pred = model._predict_action_noise_with_cache(
++                latents_action=latents,
++                timestep_action=step_t.unsqueeze(0).to(dtype=latents.dtype, device=model.device),
++                context=context,
++                context_mask=context_mask,
++                video_kv_cache=video_kv_cache,
++                attention_mask=self.attention_mask,
++                video_seq_len=self.video_seq_len,
++            )
++            latents = model.infer_action_scheduler.step(pred, step_delta, latents)
++        return latents
++
++    def _denoise_reusing_invariants(
++        self,
++        latents: torch.Tensor,
++        context: torch.Tensor,
++        context_mask: torch.Tensor,
++        video_kv_cache: list[dict[str, torch.Tensor]],
++    ) -> torch.Tensor:
++        model, mot = self.model, self.model.mot
++        expert = mot.mixtures["action"]
++        video_len, action_len = self.video_seq_len, int(latents.shape[1])
++        joint_mask = self.attention_mask[video_len : video_len + action_len, : video_len + action_len]
++        context_emb = model.action_expert.text_embedding(context)
++        context_kv = [
++            (block.cross_attn.norm_k(block.cross_attn.k(context_emb)), block.cross_attn.v(context_emb))
++            for block in expert.blocks
++        ]
++        joint_kv = []
++        for cache in video_kv_cache:
++            k = cache["k"].new_empty((cache["k"].shape[0], video_len + action_len, cache["k"].shape[2]))
++            v = cache["v"].new_empty((cache["v"].shape[0], video_len + action_len, cache["v"].shape[2]))
++            k[:, :video_len] = cache["k"]
++            v[:, :video_len] = cache["v"]
++            joint_kv.append((k, v))
++        for step_t, step_delta in zip(self.timesteps, self.deltas):
++            action_pre = model.action_expert.pre_dit(
++                action_tokens=latents,
++                timestep=step_t.unsqueeze(0).to(dtype=latents.dtype, device=model.device),
++                context=context,
++                context_mask=context_mask,
++            )
++            cross_mask = action_pre["context_mask"]
++            if cross_mask.dim() == 3:
++                cross_mask = cross_mask.unsqueeze(1)
++            x = action_pre["tokens"]
++            for block, (k_joint, v_joint), (k_ctx, v_ctx) in zip(expert.blocks, joint_kv, context_kv):
++                q, k, v, residual_x, gate_msa, shift_mlp, scale_mlp, gate_mlp, _ = mot._build_expert_attention_io(
++                    expert=expert, block=block, x=x, freqs=action_pre["freqs"], t_mod=action_pre["t_mod"]
++                )
++                k_joint[:, video_len:] = k
++                v_joint[:, video_len:] = v
++                mixed = mot._mixed_attention(q_cat=q, k_cat=k_joint, v_cat=v_joint, attention_mask=joint_mask)
++                x = block.gate(residual_x, gate_msa, block.self_attn.o(mixed))
++                cross = block.cross_attn
++                q_cross = cross.norm_q(cross.q(block.norm3(x)))
++                cross_out = flash_attention(q=q_cross, k=k_ctx, v=v_ctx, num_heads=cross.num_heads, ctx_mask=cross_mask)
++                x = x + cross.o(cross_out)
++                x = block.gate(x, gate_mlp, block.ffn(modulate(block.norm2(x), shift_mlp, scale_mlp)))
++            pred = model.action_expert.post_dit(x, action_pre)
++            latents = model.infer_action_scheduler.step(pred, step_delta, latents)
++        return latents
++
++    @staticmethod
++    def _expect(name: str, tensor: Optional[torch.Tensor], static: Optional[torch.Tensor]) -> None:
++        got = None if tensor is None else tuple(tensor.shape)
++        want = None if static is None else tuple(static.shape)
++        if got != want:
++            raise ValueError(f"`{name}` has shape {got}, but the graph was captured for {want}")
++
++    @torch.no_grad()
++    def infer_action(
++        self,
++        prompt: Optional[str],
++        input_image: torch.Tensor,
++        action_horizon: int,
++        history_images: Optional[torch.Tensor] = None,
++        history_is_pad: Optional[torch.Tensor] = None,
++        proprio: Optional[torch.Tensor] = None,
++        context: Optional[torch.Tensor] = None,
++        context_mask: Optional[torch.Tensor] = None,
++        num_inference_steps: int = 20,
++        seed: Optional[int] = None,
++        rand_device: str = "cpu",
++    ) -> ActionResult:
++        if prompt is not None or context is None or context_mask is None:
++            raise ValueError("the graph runs on a precomputed `context` and `context_mask`; encode the prompt first")
++        if seed is None:
++            raise ValueError("`seed` is required: the graph replays one fixed-shape noise draw per request")
++        if action_horizon != self.action_horizon or num_inference_steps != self.num_inference_steps:
++            raise ValueError(
++                f"graph captured for action_horizon={self.action_horizon}, num_inference_steps="
++                f"{self.num_inference_steps}; got {action_horizon}, {num_inference_steps}"
++            )
++        if history_images is not None and history_images.shape[0] == 0:
++            history_images = None
++        if input_image.ndim == 3:
++            input_image = input_image.unsqueeze(0)
++        if context.ndim == 2:
++            context = context.unsqueeze(0)
++        if context_mask.ndim == 1:
++            context_mask = context_mask.unsqueeze(0)
++        if proprio is not None and proprio.ndim == 1:
++            proprio = proprio.unsqueeze(0)
++        self._expect("input_image", input_image, self.image)
++        self._expect("history_images", history_images, self.history)
++        self._expect("context", context, self.context)
++        self._expect("context_mask", context_mask, self.context_mask)
++        self._expect("proprio", proprio, self.proprio)
++
++        generator = torch.Generator(device=rand_device).manual_seed(seed)
++        noise = torch.randn(tuple(self.noise.shape), generator=generator, device=rand_device, dtype=torch.float32)
++        with torch.cuda.device(self.model.device):
++            self.noise.copy_(noise)
++            self.image.copy_(input_image)
++            if self.history is not None and history_images is not None:
++                self.history.copy_(history_images)
++            self.context.copy_(context)
++            self.context_mask.copy_(context_mask)
++            if self.proprio is not None and proprio is not None:
++                self.proprio.copy_(proprio)
++            self.attention_mask.copy_(self._build_attention_mask(history_images, history_is_pad))
++            self.graph.replay()
++            action = self.action[0].detach().to(device="cpu", dtype=torch.float32)
++        return ActionResult(action=action)
+diff --git a/tests/test_graphed_infer.py b/tests/test_graphed_infer.py
+new file mode 100644
+index 0000000..253497c
+--- /dev/null
++++ b/tests/test_graphed_infer.py
+@@ -0,0 +1,190 @@
++import random
++
++import pytest
++import torch
++
++from fastwam.models.wan22.graphed_infer import GraphedActionInfer, device_resident_constants
++from test_history_conditioning import ACTION_HORIZON, PROPRIO_DIM, TEXT_DIM, FakeVAE, build_model
++
++HEIGHT, WIDTH = 64, 128
++CONTEXT_LEN = 5
++NUM_STEPS = 3
++
++needs_cuda = pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA graphs need a GPU")
++
++
++class _TypedFakeVAE(FakeVAE):
++    def __init__(self, dtype: torch.dtype):
++        super().__init__()
++        self.dtype = dtype
++
++    def encode(self, videos, device, tiled=False, tile_size=(30, 52), tile_stride=(15, 26)):
++        return super().encode(videos, device, tiled, tile_size, tile_stride).to(self.dtype)
++
++
++def _cuda_model(dtype: torch.dtype):
++    model = build_model().to(device="cuda", dtype=dtype)
++    model.vae = _TypedFakeVAE(dtype)
++    model.device = torch.device("cuda")
++    model.torch_dtype = dtype
++    return model.eval()
++
++
++def _request(seed: int, num_history: int, history_width: int, is_pad: tuple[bool, ...], dtype: torch.dtype):
++    gen = torch.Generator().manual_seed(seed)
++    request = {
++        "prompt": None,
++        "input_image": (torch.rand(1, 3, HEIGHT, WIDTH, generator=gen) * 2 - 1).to("cuda", dtype),
++        "action_horizon": ACTION_HORIZON,
++        "proprio": torch.randn(1, PROPRIO_DIM, generator=gen),
++        "context": torch.randn(CONTEXT_LEN, TEXT_DIM, generator=gen).to(dtype),
++        "context_mask": torch.ones(CONTEXT_LEN, dtype=torch.bool),
++        "num_inference_steps": NUM_STEPS,
++        "seed": 42 + seed,
++    }
++    if num_history:
++        request["history_images"] = (
++            torch.rand(num_history, 3, HEIGHT, history_width, generator=gen) * 2 - 1
++        ).to("cuda", dtype)
++        request["history_is_pad"] = torch.tensor(is_pad, dtype=torch.bool)
++    return request
++
++
++@needs_cuda
++@pytest.mark.parametrize("reuse", [False, True], ids=["per_step", "reuse_invariants"])
++@pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16])
++@pytest.mark.parametrize(
++    ("num_history", "history_width"), [(0, WIDTH), (2, WIDTH), (2, WIDTH // 2)], ids=["none", "full", "narrow"]
++)
++def test_graph_equals_eager_bitwise(dtype, num_history, history_width, reuse):
++    model = _cuda_model(dtype)
++    graphed = GraphedActionInfer(
++        model,
++        height=HEIGHT,
++        width=WIDTH,
++        num_history=num_history,
++        history_width=history_width,
++        context_len=CONTEXT_LEN,
++        action_horizon=ACTION_HORIZON,
++        num_inference_steps=NUM_STEPS,
++        reuse_step_invariants=reuse,
++    )
++    pads = [(False, False), (True, False), (True, True)] if num_history else [()]
++    requests = [_request(i, num_history, history_width, pads[i % len(pads)], dtype) for i in range(6)]
++    order = list(range(len(requests))) * 2
++    random.Random(0).shuffle(order)
++    for i in order:
++        expected = model.infer_action(**requests[i])["action"]
++        got = graphed.infer_action(**requests[i])["action"]
++        assert torch.equal(got, expected), f"request {i} differs: max |diff| {(got - expected).abs().max()}"
++
++
++@needs_cuda
++def test_graph_leaves_the_eager_model_unchanged():
++    model = _cuda_model(torch.float32)
++    request = _request(0, 2, WIDTH // 2, (True, False), torch.float32)
++    before = model.infer_action(**request)["action"]
++    freqs = (model.video_expert.freqs, model.action_expert.freqs)
++    GraphedActionInfer(
++        model,
++        height=HEIGHT,
++        width=WIDTH,
++        num_history=2,
++        history_width=WIDTH // 2,
++        context_len=CONTEXT_LEN,
++        action_horizon=ACTION_HORIZON,
++        num_inference_steps=NUM_STEPS,
++    )
++    assert model.video_expert.freqs is freqs[0] and model.action_expert.freqs is freqs[1]
++    assert torch.equal(model.infer_action(**request)["action"], before)
++
++
++@needs_cuda
++def test_capture_under_grad_mode_keeps_no_autograd_graph():
++    model = _cuda_model(torch.float32)
++    assert torch.is_grad_enabled() and any(p.requires_grad for p in model.parameters())
++    graphed = GraphedActionInfer(
++        model,
++        height=HEIGHT,
++        width=WIDTH,
++        num_history=2,
++        history_width=WIDTH // 2,
++        context_len=CONTEXT_LEN,
++        action_horizon=ACTION_HORIZON,
++        num_inference_steps=NUM_STEPS,
++    )
++    assert graphed.action.grad_fn is None and not graphed.action.requires_grad
++
++
++@pytest.mark.skipif(torch.cuda.device_count() < 2, reason="needs a second GPU")
++def test_graph_on_a_device_other_than_the_current_one():
++    model = build_model().to("cuda:1")
++    model.device = torch.device("cuda:1")
++    model.eval()
++    request = _request(0, 2, WIDTH // 2, (True, False), torch.float32)
++    request["input_image"] = request["input_image"].to("cuda:1")
++    request["history_images"] = request["history_images"].to("cuda:1")
++    with torch.cuda.device(0):
++        graphed = GraphedActionInfer(
++            model,
++            height=HEIGHT,
++            width=WIDTH,
++            num_history=2,
++            history_width=WIDTH // 2,
++            context_len=CONTEXT_LEN,
++            action_horizon=ACTION_HORIZON,
++            num_inference_steps=NUM_STEPS,
++        )
++        for seed in (0, 1):
++            other = _request(seed + 1, 2, WIDTH // 2, (False, False), torch.float32)
++            other["input_image"] = other["input_image"].to("cuda:1")
++            other["history_images"] = other["history_images"].to("cuda:1")
++            for req in (request, other):
++                assert torch.equal(graphed.infer_action(**req)["action"], model.infer_action(**req)["action"])
++
++
++@needs_cuda
++def test_graph_refuses_other_shapes():
++    model = _cuda_model(torch.float32)
++    graphed = GraphedActionInfer(
++        model,
++        height=HEIGHT,
++        width=WIDTH,
++        num_history=0,
++        history_width=WIDTH,
++        context_len=CONTEXT_LEN,
++        action_horizon=ACTION_HORIZON,
++        num_inference_steps=NUM_STEPS,
++    )
++    request = _request(0, 0, WIDTH, (), torch.float32)
++    with pytest.raises(ValueError, match="num_inference_steps"):
++        graphed.infer_action(**{**request, "num_inference_steps": NUM_STEPS + 1})
++    with pytest.raises(ValueError, match="history_images"):
++        graphed.infer_action(**_request(0, 2, WIDTH, (False, False), torch.float32))
++    with pytest.raises(ValueError, match="precomputed"):
++        graphed.infer_action(**{**request, "prompt": "pick", "context": None, "context_mask": None})
++
++
++def test_refuses_a_cpu_model():
++    with pytest.raises(ValueError, match="CUDA device"):
++        GraphedActionInfer(
++            build_model(),
++            height=HEIGHT,
++            width=WIDTH,
++            num_history=0,
++            history_width=WIDTH,
++            context_len=CONTEXT_LEN,
++            action_horizon=ACTION_HORIZON,
++            num_inference_steps=NUM_STEPS,
++        )
++
++
++def test_device_resident_constants_restores_the_host_tensors():
++    model = build_model()
++    video_freqs, action_freqs = model.video_expert.freqs, model.action_expert.freqs
++    with device_resident_constants(model) as moved:
++        assert all(torch.equal(a, b) for a, b in zip(model.video_expert.freqs, video_freqs))
++        assert torch.equal(model.action_expert.freqs, action_freqs)
++        assert len(moved) == len(video_freqs) + 1
++    assert model.video_expert.freqs is video_freqs
++    assert model.action_expert.freqs is action_freqs
