@@ -1,6 +1,8 @@
 # SWEEP-Bench
 
-[Project page](https://damin3927.github.io/SWEEP-Bench)
+[![arXiv](https://img.shields.io/badge/arXiv-2611.30637-b31b1b.svg)](https://arxiv.org/abs/2611.30637)
+[![Project page](https://img.shields.io/badge/Project-page-1f6feb.svg)](https://damin3927.github.io/SWEEP-Bench)
+[![Dataset](https://img.shields.io/badge/Hugging%20Face-dataset-ffcc4d.svg)](https://huggingface.co/datasets/Damin3927/SWEEP-Bench)
 
 SWEEP-Bench is a simulation benchmark that measures how robot manipulation success changes with the speed of the
 object. It has 80 conveyor-belt manipulation tasks in 16 skill categories, each evaluated at 13 belt speeds from
@@ -80,6 +82,19 @@ policy the same episodes (except the starting angle of the turntable in
 `ConveyorTurntablePick-v0`, which depends on the speed).
 An episode succeeds when the task's success condition holds for the task's required number of consecutive control
 steps, within 300 control steps (15 s). The simulation pauses while the policy computes its action.
+
+## Citation
+
+```bibtex
+@misc{honda2026sweepbench,
+  title={SWEEP-Bench: Do Embodied Policies Act on the Speed They See?},
+  author={Hiroaki Honda and Koya Sakamoto and Shu Morikuni and Yusuke Iwasawa and Taiki Miyanishi},
+  year={2026},
+  eprint={2611.30637},
+  archivePrefix={arXiv},
+  primaryClass={cs.RO},
+}
+```
 
 ## License
 
